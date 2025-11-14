@@ -1,0 +1,611 @@
+openapi: 3.0.3
+info:
+  title: API для портала "Добрые дела Росатома"
+  description: |
+    RESTful API для многостраничного сайта "Добрые дела Росатома".
+    Предоставляет методы для управления НКО, событиями, новостями, базой знаний и пользователями.
+    API разделено на публичную часть, доступную всем, и приватную, требующую аутентификации для личного кабинета и административных функций.
+  version: 1.0.0
+
+servers:
+  - url: https://api.dobro.rosatom.ru/v1
+    description: Production Server
+
+tags:
+  - name: Публичные данные
+    description: Эндпоинты для получения общедоступной информации (НКО, новости, события).
+  - name: Аутентификация и Пользователи
+    description: Регистрация, вход и управление профилем пользователя.
+  - name: НКО (Некоммерческие организации)
+    description: Управление данными НКО.
+  - name: События (Календарь)
+    description: Управление событиями.
+  - name: Новости
+    description: Управление новостями.
+  - name: База знаний
+    description: Управление материалами в базе знаний.
+  - name: Администрирование
+    description: Эндпоинты для модерации контента.
+
+paths:
+  # ===============================================================
+  # Аутентификация и Пользователи
+  # ===============================================================
+  /auth/register:
+    post:
+      tags: [Аутентификация и Пользователи]
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Пользователь успешно создан
+        '400':
+          description: Некорректные данные или пользователь уже существует
+
+  /auth/login:
+    post:
+      tags: [Аутентификация и Пользователи]
+      summary: Аутентификация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Успешный вход, возвращает JWT токен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        '401':
+          description: Неверные учетные данные
+
+  /users/me:
+    get:
+      tags: [Аутентификация и Пользователи]
+      summary: Получить информацию о текущем пользователе (личный кабинет)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Данные профиля пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    put:
+      tags: [Аутентификация и Пользователи]
+      summary: Обновить информацию о текущем пользователе
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Профиль успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  # ===============================================================
+  # Публичные данные
+  # ===============================================================
+  /cities:
+    get:
+      tags: [Публичные данные]
+      summary: Получить список городов присутствия
+      responses:
+        '200':
+          description: Список городов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+
+  /nko:
+    get:
+      tags: [Публичные данные]
+      summary: Получить список одобренных НКО
+      parameters:
+        - name: city_id
+          in: query
+          schema:
+            type: integer
+          description: ID города для фильтрации
+      responses:
+        '200':
+          description: Список НКО
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NKO'
+
+  /nko/{nkoId}:
+    get:
+      tags: [Публичные данные]
+      summary: Получить детальную информацию об одном НКО
+      parameters:
+        - name: nkoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Детальная информация о НКО
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NKO'
+        '404':
+          description: НКО не найдено
+
+  /events:
+    get:
+      tags: [Публичные данные]
+      summary: Получить список одобренных событий
+      parameters:
+        - name: city_id
+          in: query
+          schema:
+            type: integer
+          description: ID города для фильтрации
+      responses:
+        '200':
+          description: Список событий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+
+  /news:
+    get:
+      tags: [Публичные данные]
+      summary: Получить ленту новостей
+      parameters:
+        - name: city_id
+          in: query
+          schema:
+            type: integer
+          description: ID города для фильтрации (если не указан, возвращаются общие новости)
+      responses:
+        '200':
+          description: Список новостей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/News'
+
+  /knowledge-base:
+    get:
+      tags: [Публичные данные]
+      summary: Получить список материалов из базы знаний
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Категория для фильтрации
+      responses:
+        '200':
+          description: Список материалов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KnowledgeBaseMaterial'
+
+  # ===============================================================
+  # НКО (управление)
+  # ===============================================================
+  /nko:
+    post:
+      tags: [НКО (Некоммерческие организации)]
+      summary: Зарегистрировать новое НКО (отправка на модерацию)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NKOInput'
+      responses:
+        '202':
+          description: Заявка на регистрацию НКО принята и отправлена на модерацию
+        '401':
+          description: Пользователь не авторизован
+
+  /nko/{nkoId}:
+    put:
+      tags: [НКО (Некоммерческие организации)]
+      summary: Обновить информацию о своем НКО
+      description: Доступно только владельцу НКО или администратору.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: nkoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NKOInput'
+      responses:
+        '200':
+          description: НКО успешно обновлено
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: НКО не найдено
+
+  # ===============================================================
+  # События (управление)
+  # ===============================================================
+  /events:
+    post:
+      tags: [События (Календарь)]
+      summary: Добавить новое событие (отправка на модерацию)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInput'
+      responses:
+        '202':
+          description: Событие добавлено и отправлено на модерацию
+        '401':
+          description: Пользователь не авторизован
+
+  # ===============================================================
+  # Эндпоинты для администрирования (упрощенные)
+  # ===============================================================
+  /admin/nko/pending:
+    get:
+      tags: [Администрирование]
+      summary: Получить список НКО, ожидающих модерации
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Список НКО на модерации
+        '403':
+          description: Доступ запрещен (только для администраторов)
+
+  /admin/nko/{nkoId}/approve:
+    post:
+      tags: [Администрирование]
+      summary: Одобрить регистрацию НКО
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: nkoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: НКО одобрено
+        '403':
+          description: Доступ запрещен
+
+  /admin/news:
+    post:
+      tags: [Администрирование, Новости]
+      summary: Добавить новость
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsInput'
+      responses:
+        '201':
+          description: Новость создана
+        '403':
+          description: Доступ запрещен
+
+  /admin/knowledge-base:
+    post:
+      tags: [Администрирование, База знаний]
+      summary: Добавить материал в базу знаний
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeBaseMaterialInput'
+      responses:
+        '201':
+          description: Материал добавлен
+        '403':
+          description: Доступ запрещен
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    NKO:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 210
+        name:
+          type: string
+          example: "Волонтеры-медики"
+        category:
+          type: string
+          example: "Медицина и ЗОЖ"
+        description:
+          type: string
+          example: "Краткое описание деятельности в 2-3 предложения."
+        address:
+          type: string
+          example: "г. Обнинск, ул. Ленина, д. 1"
+        logo_url:
+          type: string
+          format: uri
+          example: "https://example.com/logo.png"
+        website_url:
+          type: string
+          format: uri
+          example: "https://example-nko.com"
+        social_links:
+          type: array
+          items:
+            type: string
+            format: uri
+          example: ["https://vk.com/nko", "https://t.me/nko"]
+        city_id:
+          type: integer
+          example: 19
+        status:
+          type: string
+          enum: [approved, pending_moderation, rejected]
+          example: "approved"
+
+    NKOInput:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        logo_url:
+          type: string
+          format: uri
+        website_url:
+          type: string
+          format: uri
+        social_links:
+          type: array
+          items:
+            type: string
+            format: uri
+        city_id:
+          type: integer
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+          example: "Субботник в городском парке"
+        description:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        city_id:
+          type: integer
+        address:
+          type: string
+        organizer_nko_id:
+          type: integer
+          description: ID НКО-организатора
+        status:
+          type: string
+          enum: [approved, pending_moderation, rejected]
+          example: "approved"
+
+    EventInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        city_id:
+          type: integer
+        address:
+          type: string
+
+    News:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        image_url:
+          type: string
+          format: uri
+        publication_date:
+          type: string
+          format: date-time
+        city_id:
+          type: integer
+          nullable: true
+          description: "null для общих новостей"
+
+    NewsInput:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        image_url:
+          type: string
+          format: uri
+        city_id:
+          type: integer
+          nullable: true
+
+    KnowledgeBaseMaterial:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+          example: "Как организовать мероприятие"
+        description:
+          type: string
+        category:
+          type: string
+        file_type:
+          type: string
+          enum: [pdf, video, link, document]
+        url:
+          type: string
+          format: uri
+          example: "https://example.com/guide.pdf"
+
+    KnowledgeBaseMaterialInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        file_type:
+          type: string
+          enum: [pdf, video, link, document]
+        url:
+          type: string
+          format: uri
+
+    City:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Ангарск, Иркутская область"
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        managed_nko_id:
+          type: integer
+          nullable: true
+          description: "ID НКО, которым управляет пользователь"
+        favorites:
+          type: array
+          items:
+            type: object
+            properties:
+              item_type:
+                type: string
+                enum: [news, event, material]
+              item_id:
+                type: integer
+                
+    UserProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+

@@ -1,0 +1,74 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "/Users/seregakrasava/TMP/NKO_govna",
+        "--mode",
+        "planning",
+        "--mode",
+        "editing",
+        "--mode",
+        "one-shot",
+        "--mode",
+        "onboarding"
+      ],
+      "env": {},
+      "alwaysAllow": [
+        "list_dir",
+        "find_file",
+        "search_for_pattern",
+        "get_symbols_overview",
+        "find_symbol",
+        "find_referencing_symbols",
+        "replace_symbol_body",
+        "insert_after_symbol",
+        "insert_before_symbol",
+        "rename_symbol",
+        "write_memory",
+        "read_memory",
+        "list_memories",
+        "delete_memory",
+        "edit_memory",
+        "activate_project",
+        "get_current_config",
+        "check_onboarding_performed",
+        "onboarding",
+        "think_about_collected_information",
+        "think_about_task_adherence",
+        "think_about_whether_you_are_done",
+        "initial_instructions"
+      ]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    },
+    "@21st-dev/magic": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@21st-dev/magic@latest",
+        "API_KEY=\"3bd47185f38bb88444a3efeebb3227de9c7415d0163d2c852326feeafc34d3c2\""
+      ]
+    }
+  }
+}
