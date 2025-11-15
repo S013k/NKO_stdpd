@@ -133,3 +133,69 @@ def fetch_nko(filters: NKOFilterRequest, db: Session) -> List[NKOResponse]:
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+def fetch_nko_by_id(nko_id: int, db: Session) -> NKOResponse:
+    """
+    Получение конкретного НКО по ID
+
+    Args:
+        nko_id: ID НКО
+        db: Сессия базы данных
+
+    Returns:
+        Данные НКО с категориями
+
+    Raises:
+        HTTPException: Если НКО не найдено или произошла ошибка БД
+    """
+    
+    try:
+        # Запрос НКО с JOIN к городам
+        result = (
+            db.query(NKOInDB, CityInDB.name.label("city_name"))
+            .join(CityInDB, NKOInDB.city_id == CityInDB.id)
+            .filter(NKOInDB.id == nko_id)
+            .first()
+        )
+        
+        if not result:
+            raise HTTPException(status_code=404, detail=f"НКО с ID {nko_id} не найдено")
+        
+        nko, city_name = result
+        
+        # Запрос категорий для НКО
+        categories = (
+            db.query(NKOCategoryInDB.name)
+            .join(NKOCategoriesLinkInDB, NKOCategoryInDB.id == NKOCategoriesLinkInDB.category_id)
+            .filter(NKOCategoriesLinkInDB.nko_id == nko.id)
+            .all()
+        )
+        categories = [cat[0] for cat in categories]
+        
+        # Извлечение координат из POINT
+        if nko.coords and isinstance(nko.coords, (tuple, list)) and len(nko.coords) == 2:
+            latitude, longitude = float(nko.coords[0]), float(nko.coords[1])
+        else:
+            latitude, longitude = 0.0, 0.0
+        
+        nko_data = NKOResponse(
+            id=nko.id,
+            name=nko.name,
+            description=nko.description,
+            logo=nko.logo,
+            address=nko.address,
+            city=city_name,
+            latitude=latitude,
+            longitude=longitude,
+            meta=nko.meta if nko.meta else None,
+            created_at=nko.created_at.isoformat() if nko.created_at else None,
+            categories=categories,
+        )
+        
+        return nko_data
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

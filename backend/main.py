@@ -14,7 +14,7 @@ from auth import (
 )
 from config import settings
 from database import close_db, get_db, init_db
-from nko import NKOFilterRequest, NKOResponse, fetch_nko
+from nko import NKOFilterRequest, NKOResponse, fetch_nko, fetch_nko_by_id
 from city import CityCreateRequest, CityResponse, create_city, delete_city, fetch_cities, fetch_city_by_id
 from s3 import router as s3_router
 
@@ -132,6 +132,20 @@ def remove_city(city_id: int, db: Session = Depends(get_db)):
     Удаление города по ID
     """
     return delete_city(city_id, db)
+
+@app.get("/nko/{nko_id}", response_model=NKOResponse)
+def get_nko_by_id(nko_id: int, db: Session = Depends(get_db)):
+    """
+    Получение конкретного НКО по ID
+
+    Args:
+        nko_id: ID НКО
+        db: Сессия базы данных
+
+    Returns:
+        Данные НКО с категориями
+    """
+    return fetch_nko_by_id(nko_id, db)
 
 
 # Auth endpoints
