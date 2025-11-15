@@ -4,10 +4,7 @@ CREATE TABLE IF NOT EXISTS events_categories (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS events_states (
-    state SMALLSERIAL PRIMARY KEY,
-    description VARCHAR(100) NOT NULL,
-);
+CREATE TYPE events_states AS ENUM ('nko', 'admin', 'moder', 'user');
 
 CREATE TABLE IF NOT EXISTS events (
     id BIGSERIAL PRIMARY KEY,
@@ -21,7 +18,7 @@ CREATE TABLE IF NOT EXISTS events (
     finish_at TIMESTAMPTZ,
     created_by BIGINT NOT NULL,
     approved_by BIGINT,
-    state SMALLINT
+    state events_states NOT NULL,
     meta TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
     FOREIGN KEY (approved_by) REFERENCES users(id)
