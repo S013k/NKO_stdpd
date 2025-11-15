@@ -1,6 +1,8 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { apiClient, ApiError } from '@/lib/api'
+import { cookies } from '@/lib/cookies'
 
 interface User {
   id: number
@@ -14,7 +16,7 @@ interface AuthContextType {
   isLoading: boolean
   login: (login: string, password: string) => Promise<void>
   register: (full_name: string, login: string, password: string, role: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
 
@@ -26,74 +28,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Проверка авторизации при загрузке
   useEffect(() => {
-    refreshUser()
+    checkAuthStatus()
   }, [])
+
+  const checkAuthStatus = async () => {
+    try {
+      // Сначала проверяем cookie
+      const userInfo = cookies.getUserInfo()
+      const token = cookies.getAccessToken()
+
+      if (userInfo && token) {
+        // Преобразуем тип role для соответствия интерфейсу User
+        setUser({
+          ...userInfo,
+          role: userInfo.role as 'nko' | 'admin' | 'moder' | 'user'
+        })
+      } else {
+        // Если в cookie нет данных, пробуем получить через API
+        await refreshUser()
+      }
+    } catch (error) {
+      console.error('Check auth status error:', error)
+      setUser(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const login = async (username: string, password: string) => {
     try {
-      const formData = new FormData()
-      formData.append('username', username)
-      formData.append('password', password)
-
-      const apiUrl = process.env.NODE_ENV === 'production' ? '/api/auth/login' : 'http://localhost:8000/auth/login'
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Важно для cookie
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || 'Ошибка входа')
-      }
-
+      console.log('DEBUG: Login attempt with username:', username)
+      const tokenResponse = await apiClient.login(username, password)
+      console.log('DEBUG: Login successful, token received:', tokenResponse.access_token ? 'yes' : 'no')
+      
+      // Сохраняем токен в cookie
+      cookies.setAccessToken(tokenResponse.access_token)
+      console.log('DEBUG: Token saved to cookie')
+      
+      // Получаем данные пользователя через API
       await refreshUser()
     } catch (error) {
       console.error('Login error:', error)
-      throw error
+      if (error instanceof ApiError) {
+        throw new Error(error.message)
+      }
+      throw new Error('Ошибка входа')
     }
   }
 
   const register = async (full_name: string, username: string, password: string, role: string) => {
     try {
-      const apiUrl = process.env.NODE_ENV === 'production' ? '/api/auth/register' : 'http://localhost:8000/auth/register'
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          full_name,
-          login,
-          password,
-          role,
-        }),
-        credentials: 'include',
+      await apiClient.register({
+        full_name,
+        login: username,
+        password,
+        role: role as 'nko' | 'admin' | 'moder' | 'user'
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || 'Ошибка регистрации')
-      }
-
+      
       // После регистрации сразу входим
       await login(username, password)
     } catch (error) {
       console.error('Register error:', error)
-      throw error
+      if (error instanceof ApiError) {
+        throw new Error(error.message)
+      }
+      throw new Error('Ошибка регистрации')
     }
   }
 
   const logout = async () => {
     try {
-      // Очищаем cookie на сервере (если есть эндпоинт для logout)
-      const apiUrl = process.env.NODE_ENV === 'production' ? '/api/auth/logout' : 'http://localhost:8000/auth/logout'
-      await fetch(apiUrl, {
-        method: 'POST',
-        credentials: 'include',
-      }).catch(() => {
-        // Игнорируем ошибку, если эндпоинт не существует
-      })
+      await apiClient.logout()
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -103,22 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const apiUrl = process.env.NODE_ENV === 'production' ? '/api/users/me/' : 'http://localhost:8000/users/me/'
-      const response = await fetch(apiUrl, {
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-      } else {
-        setUser(null)
-      }
+      console.log('DEBUG: Refreshing user data...')
+      const userData = await apiClient.getCurrentUser()
+      console.log('DEBUG: User data received:', userData)
+      setUser(userData)
+      cookies.setUserInfo(userData)
+      console.log('DEBUG: User data saved to cookie')
     } catch (error) {
       console.error('Refresh user error:', error)
       setUser(null)
-    } finally {
-      setIsLoading(false)
+      cookies.clearAuthCookies()
     }
   }
 

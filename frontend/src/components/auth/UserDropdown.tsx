@@ -28,11 +28,11 @@ export function UserDropdown({ className = '' }: UserDropdownProps) {
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('click', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('click', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }
   }, [])
@@ -76,101 +76,79 @@ export function UserDropdown({ className = '' }: UserDropdownProps) {
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {/* Кнопка триггера */}
-      <Button
-        variant="ghost"
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        className="flex items-center space-x-2 p-2 hover:bg-secondary rounded-lg transition-colors"
       >
         <UserAvatar size="sm" showInitials={true} />
-        <ChevronDown 
-          className={`h-4 w-4 text-[var(--color-text-secondary)] transition-transform duration-200 ${
+        <ChevronDown
+          className={`text-secondary transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
-      </Button>
+      </button>
 
       {/* Выпадающее меню */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-[var(--color-border)] py-2 z-50">
+        <div className="user-dropdown">
           {/* Заголовок с информацией о пользователе */}
-          <div className="px-4 py-3 border-b border-[var(--color-border)]">
-            <div className="flex items-center space-x-3">
-              <UserAvatar size="md" showInitials={true} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                  {user.full_name}
-                </p>
-                <p className="text-xs text-[var(--color-text-secondary)] truncate">
-                  @{user.login}
-                </p>
-                <div className="flex items-center space-x-1 mt-1">
-                  {getRoleIcon(user.role)}
-                  <span className="text-xs text-[var(--color-text-secondary)]">
-                    {getRoleLabel(user.role)}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="user-info">
+            <div className="user-name">{user.full_name}</div>
+            <div className="user-role">@{user.login}</div>
           </div>
 
           {/* Пункты меню */}
           <div className="py-2">
             <button
-              className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-gray-100 transition-colors flex items-center space-x-3"
+              className="user-dropdown-item"
               onClick={() => {
                 setIsOpen(false)
                 // Здесь можно добавить переход в профиль
                 console.log('Navigate to profile')
               }}
             >
-              <User className="h-4 w-4 text-[var(--color-text-secondary)]" />
-              <span>Мой профиль</span>
+              Мой профиль
             </button>
 
             <button
-              className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-gray-100 transition-colors flex items-center space-x-3"
+              className="user-dropdown-item"
               onClick={() => {
                 setIsOpen(false)
                 // Здесь можно добавить переход в настройки
                 console.log('Navigate to settings')
               }}
             >
-              <Settings className="h-4 w-4 text-[var(--color-text-secondary)]" />
-              <span>Настройки</span>
+              Настройки
             </button>
 
             {(user.role === 'admin' || user.role === 'nko') && (
               <button
-                className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-gray-100 transition-colors flex items-center space-x-3"
+                className="user-dropdown-item"
                 onClick={() => {
                   setIsOpen(false)
                   // Здесь можно добавить переход в панель управления
                   console.log('Navigate to admin panel')
                 }}
               >
-                <Building className="h-4 w-4 text-[var(--color-text-secondary)]" />
-                <span>Панель управления</span>
+                Панель управления
               </button>
             )}
           </div>
 
           {/* Разделитель */}
-          <div className="border-t border-[var(--color-border)] my-2"></div>
+          <div className="border-t border-border my-2"></div>
 
           {/* Кнопка выхода */}
-          <div className="px-2">
-            <button
-              onClick={handleLogout}
-              className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors flex items-center space-x-3"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Выйти</span>
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="user-dropdown-item danger"
+          >
+            Выйти
+          </button>
 
           {/* Футер с дополнительной информацией */}
-          <div className="px-4 py-2 border-t border-[var(--color-border)] mt-2">
-            <p className="text-xs text-[var(--color-text-secondary)] text-center">
+          <div className="px-4 py-2 border-t border-border mt-2">
+            <p className="text-xs text-secondary text-center">
               Портал Добрые дела Росатома
             </p>
           </div>

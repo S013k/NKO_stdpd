@@ -20,7 +20,7 @@ export function Header() {
   const { user, isLoading } = useAuth()
 
   return (
-    <header className="bg-white border-b border-[var(--color-border)] sticky top-0 z-50">
+    <header className="bg-background border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Логотип */}
@@ -36,27 +36,27 @@ export function Header() {
 
           {/* Десктопная навигация */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link 
-              href="/nko" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/nko"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               НКО
             </Link>
-            <Link 
-              href="/news" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/news"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               Новости
             </Link>
-            <Link 
-              href="/knowledge" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/knowledge"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               База знаний
             </Link>
-            <Link 
-              href="/calendar" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/calendar"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               Календарь
             </Link>

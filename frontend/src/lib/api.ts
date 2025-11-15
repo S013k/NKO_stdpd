@@ -1,6 +1,8 @@
 // API утилиты для работы с бэкендом
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000'
+import { cookies } from './cookies'
+
+const API_BASE_URL = '/api'
 
 export interface LoginRequest {
   login: string
@@ -51,14 +53,23 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
     
+    // Добавляем Authorization заголовок если есть токен
+    const token = cookies.getAccessToken()
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...options.headers as Record<string, string>,
+    }
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
     const defaultOptions: RequestInit = {
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     }
 
+    console.log('DEBUG: Request to', endpoint, 'with headers:', headers)
     let response = await fetch(url, { ...defaultOptions, ...options })
 
     // Если получили 401, пробуем обновить токен
@@ -94,9 +105,24 @@ class ApiClient {
   private async refreshToken(): Promise<void> {
     // Для обновления токена можно использовать специальный эндпоинт
     // или просто проверить текущий статус через /users/me
+    console.log('DEBUG: refreshToken called')
+    
+    const token = cookies.getAccessToken()
+    console.log('DEBUG: Token from cookies:', token ? 'exists' : 'missing')
+    
+    const headers: Record<string, string> = {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
+    console.log('DEBUG: Headers for /users/me/:', headers)
+    
     const response = await fetch(`${this.baseURL}/users/me/`, {
       credentials: 'include',
+      headers,
     })
+
+    console.log('DEBUG: /users/me/ response status:', response.status)
 
     if (!response.ok) {
       throw new Error('Failed to refresh token')

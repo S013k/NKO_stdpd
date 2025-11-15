@@ -18,7 +18,7 @@ interface RegisterModalProps {
 
 interface FormData {
   full_name: string
-  username: string
+  login: string
   password: string
   confirmPassword: string
   role: 'nko' | 'user'
@@ -26,7 +26,7 @@ interface FormData {
 
 interface FormErrors {
   full_name?: string
-  username?: string
+  login?: string
   password?: string
   confirmPassword?: string
   role?: string
@@ -36,7 +36,7 @@ interface FormErrors {
 export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModalProps) {
   const [formData, setFormData] = useState<FormData>({
     full_name: '',
-    username: '',
+    login: '',
     password: '',
     confirmPassword: '',
     role: 'user'
@@ -45,13 +45,13 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<{
     full_name: boolean
-    username: boolean
+    login: boolean
     password: boolean
     confirmPassword: boolean
     role: boolean
   }>({
     full_name: false,
-    username: false,
+    login: false,
     password: false,
     confirmPassword: false,
     role: false
@@ -68,15 +68,13 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
         return 'Имя должно содержать минимум 2 символа'
       }
     }
-    if (name === 'username') {
+    if (name === 'login') {
       if (!value.trim()) {
-        return 'Логин обязателен'
+        return 'Email обязателен'
       }
-      if (value.length < 3) {
-        return 'Логин должен содержать минимум 3 символа'
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(value)) {
-        return 'Логин может содержать только буквы, цифры и подчеркивание'
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return 'Введите корректный email адрес'
       }
     }
     if (name === 'password') {
@@ -133,7 +131,7 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
     newErrors.full_name = validateField('full_name', formData.full_name)
-    newErrors.username = validateField('username', formData.username)
+    newErrors.login = validateField('login', formData.login)
     newErrors.password = validateField('password', formData.password)
     newErrors.confirmPassword = validateField('confirmPassword', formData.confirmPassword)
     
@@ -144,7 +142,7 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
     setErrors(newErrors)
     setTouched({
       full_name: true,
-      username: true,
+      login: true,
       password: true,
       confirmPassword: true,
       role: true
@@ -164,23 +162,23 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
     setErrors({})
 
     try {
-      await authRegister(formData.full_name, formData.username, formData.password, formData.role)
-      onClose()
-      // Очищаем форму после успешной регистрации
-      setFormData({
-        full_name: '',
-        username: '',
-        password: '',
-        confirmPassword: '',
-        role: 'user'
-      })
-      setTouched({
-        full_name: false,
-        username: false,
-        password: false,
-        confirmPassword: false,
-        role: false
-      })
+     await authRegister(formData.full_name, formData.login, formData.password, formData.role)
+     onClose()
+     // Очищаем форму после успешной регистрации
+     setFormData({
+       full_name: '',
+       login: '',
+       password: '',
+       confirmPassword: '',
+       role: 'user'
+     })
+     setTouched({
+       full_name: false,
+       login: false,
+       password: false,
+       confirmPassword: false,
+       role: false
+     })
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Ошибка регистрации' })
     } finally {
@@ -192,19 +190,19 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
     if (!isLoading) {
       setErrors({})
       setFormData({
-        full_name: '',
-        username: '',
-        password: '',
-        confirmPassword: '',
-        role: 'user'
-      })
-      setTouched({
-        full_name: false,
-        username: false,
-        password: false,
-        confirmPassword: false,
-        role: false
-      })
+       full_name: '',
+       login: '',
+       password: '',
+       confirmPassword: '',
+       role: 'user'
+     })
+     setTouched({
+       full_name: false,
+       login: false,
+       password: false,
+       confirmPassword: false,
+       role: false
+     })
       onClose()
     }
   }
@@ -213,19 +211,19 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
     if (!isLoading) {
       setErrors({})
       setFormData({
-        full_name: '',
-        username: '',
-        password: '',
-        confirmPassword: '',
-        role: 'user'
-      })
-      setTouched({
-        full_name: false,
-        username: false,
-        password: false,
-        confirmPassword: false,
-        role: false
-      })
+       full_name: '',
+       login: '',
+       password: '',
+       confirmPassword: '',
+       role: 'user'
+     })
+     setTouched({
+       full_name: false,
+       login: false,
+       password: false,
+       confirmPassword: false,
+       role: false
+     })
       onSwitchToLogin()
     }
   }
@@ -234,29 +232,28 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[480px] bg-background border-border">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center" style={{ color: '#0066B3' }}>
+          <DialogTitle className="modal-title">
             Регистрация
           </DialogTitle>
-          <DialogDescription className="text-center text-muted-foreground">
+          <DialogDescription className="modal-subtitle">
             Создайте новый аккаунт для доступа к системе
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit}>
           {errors.general && (
-            <Alert variant="destructive" className="bg-red-50 border-red-200">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{errors.general}</AlertDescription>
-            </Alert>
+            <div className="form-error">
+              {errors.general}
+            </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="full_name" className="text-sm font-medium text-foreground">
+          <div className="form-group">
+            <label htmlFor="full_name" className="form-label">
               Полное имя
-            </Label>
+            </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <input
                 id="full_name"
                 name="full_name"
                 type="text"
@@ -265,47 +262,44 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 disabled={isLoading}
-                className={`pl-10 h-11 ${
-                  errors.full_name && touched.full_name
-                    ? 'border-red-500 focus-visible:ring-red-500'
-                    : 'focus-visible:ring-[#0066B3]'
+                className={`form-input pl-10 ${
+                  errors.full_name && touched.full_name ? 'error' : ''
                 }`}
               />
             </div>
             {errors.full_name && touched.full_name && (
-              <p className="text-sm text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
+              <div className="form-error">
                 {errors.full_name}
-              </p>
+              </div>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-sm font-medium text-foreground">
-              Логин
+            <Label htmlFor="login" className="text-sm font-medium text-foreground">
+              Email
             </Label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                id="username"
-                name="username"
-                type="text"
-                placeholder="Придумайте логин"
-                value={formData.username}
+                id="login"
+                name="login"
+                type="email"
+                placeholder="Введите ваш email"
+                value={formData.login}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 disabled={isLoading}
                 className={`pl-10 h-11 ${
-                  errors.username && touched.username
+                  errors.login && touched.login
                     ? 'border-red-500 focus-visible:ring-red-500'
                     : 'focus-visible:ring-[#0066B3]'
                 }`}
               />
             </div>
-            {errors.username && touched.username && (
+            {errors.login && touched.login && (
               <p className="text-sm text-red-500 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
-                {errors.username}
+                {errors.login}
               </p>
             )}
           </div>

@@ -82,12 +82,12 @@ export class CookieManager {
       maxAge: 30 * 60, // 30 минут
       path: '/',
       secure: isProduction,
-      httpOnly: true, // Важно для безопасности
+      httpOnly: false, // Должно быть false для доступа из JavaScript
       sameSite: 'lax',
     })
   }
 
-  // Получение токена доступа (только для серверной части)
+  // Получение токена доступа
   static getAccessToken(): string | null {
     return this.get('access_token')
   }

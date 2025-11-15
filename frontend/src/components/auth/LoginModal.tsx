@@ -16,37 +16,38 @@ interface LoginModalProps {
 }
 
 interface FormData {
-  username: string
+  login: string
   password: string
 }
 
 interface FormErrors {
-  username?: string
+  login?: string
   password?: string
   general?: string
 }
 
 export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalProps) {
   const [formData, setFormData] = useState<FormData>({
-    username: '',
+    login: '',
     password: ''
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [touched, setTouched] = useState<{ username: boolean; password: boolean }>({
-    username: false,
+  const [touched, setTouched] = useState<{ login: boolean; password: boolean }>({
+    login: false,
     password: false
   });
 
   const { login: authLogin } = useAuth()
 
   const validateField = (name: keyof FormData, value: string): string | undefined => {
-    if (name === 'username') {
+    if (name === 'login') {
       if (!value.trim()) {
-        return 'Логин обязателен'
+        return 'Email обязателен'
       }
-      if (value.length < 3) {
-        return 'Логин должен содержать минимум 3 символа'
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return 'Введите корректный email адрес'
       }
     }
     if (name === 'password') {
@@ -79,13 +80,13 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
-    newErrors.username = validateField('username', formData.username)
+    newErrors.login = validateField('login', formData.login)
     newErrors.password = validateField('password', formData.password)
     
     setErrors(newErrors)
-    setTouched({ username: true, password: true })
+    setTouched({ login: true, password: true })
     
-    return !newErrors.username && !newErrors.password
+    return !newErrors.login && !newErrors.password
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,12 +99,12 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
     setIsLoading(true)
     setErrors({})
 
-    try {
-      await authLogin(formData.username, formData.password)
+     try {
+      await authLogin(formData.login, formData.password)
       onClose()
       // Очищаем форму после успешного входа
-      setFormData({ username: '', password: '' })
-      setTouched({ username: false, password: false })
+      setFormData({ login: '', password: '' })
+      setTouched({ login: false, password: false })
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Ошибка входа' })
     } finally {
@@ -113,9 +114,10 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
 
   const handleClose = () => {
     if (!isLoading) {
+      console.log('DEBUG: handleClose called with formData:', formData)
       setErrors({})
-      setFormData({ username: '', password: '' })
-      setTouched({ username: false, password: false })
+      setFormData({ login: '', password: '' })
+      setTouched({ login: false, password: false })
       onClose()
     }
   }
@@ -123,8 +125,8 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
   const handleSwitchToRegister = () => {
     if (!isLoading) {
       setErrors({})
-      setFormData({ username: '', password: '' })
-      setTouched({ username: false, password: false })
+      setFormData({ login: '', password: '' })
+      setTouched({ login: false, password: false })
       onSwitchToRegister()
     }
   }
@@ -133,49 +135,45 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[440px] bg-background border-border">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center" style={{ color: '#0066B3' }}>
+          <DialogTitle className="modal-title">
             Вход в систему
           </DialogTitle>
-          <DialogDescription className="text-center text-muted-foreground">
+          <DialogDescription className="modal-subtitle">
             Войдите в свой аккаунт для продолжения
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+        <form onSubmit={handleSubmit}>
           {errors.general && (
-            <Alert variant="destructive" className="bg-red-50 border-red-200">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{errors.general}</AlertDescription>
-            </Alert>
+            <div className="form-error">
+              {errors.general}
+            </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="username" className="text-sm font-medium text-foreground">
-              Логин
-            </Label>
+          <div className="form-group">
+            <label htmlFor="login" className="form-label">
+              Email
+            </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                placeholder="Введите ваш логин"
-                value={formData.username}
+              <input
+                id="login"
+                name="login"
+                type="email"
+                placeholder="Введите ваш email"
+                value={formData.login}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 disabled={isLoading}
-                className={`pl-10 h-11 ${
-                  errors.username && touched.username
-                    ? 'border-red-500 focus-visible:ring-red-500'
-                    : 'focus-visible:ring-[#0066B3]'
+                className={`form-input pl-10 ${
+                  errors.login && touched.login ? 'error' : ''
                 }`}
               />
             </div>
-            {errors.username && touched.username && (
-              <p className="text-sm text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.username}
-              </p>
+            {errors.login && touched.login && (
+              <div className="form-error">
+                {errors.login}
+              </div>
             )}
           </div>
 

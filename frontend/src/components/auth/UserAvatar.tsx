@@ -20,7 +20,7 @@ export function UserAvatar({
   if (!user) {
     // Показываем логотип Росатома как фоллбэк для неавторизованных пользователей
     return (
-      <div className={`rounded-full bg-white border-2 border-[var(--color-primary)] flex items-center justify-center ${className}`}>
+      <div className={`user-avatar ${className}`}>
         <RosatomLogo
           type="horizontalColor"
           width={getSizeWidth(size)}
@@ -45,24 +45,10 @@ export function UserAvatar({
 
   return (
     <div className={`relative group ${className}`}>
-      <div 
+      <div
         className={`
           ${avatarSize}
-          rounded-full 
-          bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)]
-          flex 
-          items-center 
-          justify-center 
-          text-white 
-          font-semibold
-          border-2 
-          border-white
-          shadow-lg
-          transition-all
-          duration-200
-          hover:shadow-xl
-          hover:scale-105
-          cursor-pointer
+          user-avatar
         `}
         title={user.full_name}
       >
@@ -80,16 +66,12 @@ export function UserAvatar({
         )}
       </div>
       
-      {/* Индикатор онлайн статуса */}
-      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-      
       {/* Tooltip с информацией о пользователе */}
-      <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-        <div className="font-medium">{user.full_name}</div>
-        <div className="text-xs text-gray-300">@{user.login}</div>
-        <div className="text-xs text-gray-400 capitalize">{user.role}</div>
-        {/* Стрелочка */}
-        <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+      <div className="user-dropdown">
+        <div className="user-info">
+          <div className="user-name">{user.full_name}</div>
+          <div className="user-role">@{user.login}</div>
+        </div>
       </div>
     </div>
   )
