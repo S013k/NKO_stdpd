@@ -4,6 +4,11 @@ CREATE TABLE IF NOT EXISTS events_categories (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS events_states (
+    state SMALLSERIAL PRIMARY KEY,
+    description VARCHAR(100) NOT NULL,
+);
+
 CREATE TABLE IF NOT EXISTS events (
     id BIGSERIAL PRIMARY KEY,
     nko_id BIGINT NOT NULL REFERENCES nko(id) ON DELETE CASCADE,
@@ -14,7 +19,13 @@ CREATE TABLE IF NOT EXISTS events (
     coords POINT, -- координаты (x=lon, y=lat)
     starts_at TIMESTAMPTZ,
     finish_at TIMESTAMPTZ,
+    created_by BIGINT NOT NULL,
+    approved_by BIGINT,
+    state SMALLINT
+    meta TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
+    FOREIGN KEY (approved_by) REFERENCES users(id)
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS events_categories_link (
