@@ -96,12 +96,19 @@ def fetch_nko(filters: NKOFilterRequest, db: Session) -> List[NKOResponse]:
                 )
             )
         
-        # TODO: Фильтр по избранным (требует таблицы favorites и user_id из JWT)
-        # if filters.favorite and filters.jwt_token:
-        #     user_id = decode_jwt(filters.jwt_token)
-        #     query = query.filter(exists().where(
-        #         and_(Favorites.nko_id == NKOInDB.id, Favorites.user_id == user_id)
-        #     ))
+        # Фильтр по избранным
+        if filters.favorite and filters.jwt_token:
+            from models import FavoriteNKOInDB
+            from auth import jwt_decode
+            try:
+                payload = jwt_decode(filters.jwt_token)
+                user_id = payload.get("id")
+                if user_id:
+                    query = query.join(FavoriteNKOInDB, NKOInDB.id == FavoriteNKOInDB.nko_id)
+                    query = query.filter(FavoriteNKOInDB.user_id == user_id)
+            except Exception:
+                # Если токен невалидный, просто игнорируем фильтр
+                pass
         
         # Сортировка по дате создания
         query = query.order_by(NKOInDB.created_at.desc())
@@ -330,4 +337,156 @@ def delete_nko(nko_id: int, db: Session) -> dict:
         raise
     except Exception as e:
         db.rollback()
+
+
+def add_nko_to_favorites(user_id: int, nko_id: int, db: Session) -> dict:
+    """
+    Добавление НКО в избранное пользователя
+
+    Args:
+        user_id: ID пользователя
+        nko_id: ID НКО
+        db: Сессия базы данных
+
+    Returns:
+        Словарь с сообщением об успешном добавлении
+
+    Raises:
+        HTTPException: Если НКО не найдено или уже в избранном
+    """
+    from models import FavoriteNKOInDB
+    
+    try:
+        # Проверяем существование НКО
+        nko = db.query(NKOInDB).filter(NKOInDB.id == nko_id).first()
+        if not nko:
+            raise HTTPException(status_code=404, detail=f"НКО с ID {nko_id} не найдено")
+        
+        # Проверяем, не добавлено ли уже в избранное
+        existing = db.query(FavoriteNKOInDB).filter(
+            FavoriteNKOInDB.user_id == user_id,
+            FavoriteNKOInDB.nko_id == nko_id
+        ).first()
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="НКО уже в избранном")
+        
+        # Добавляем в избранное
+        favorite = FavoriteNKOInDB(user_id=user_id, nko_id=nko_id)
+        db.add(favorite)
+        db.commit()
+        
+        return {"message": f"НКО с ID {nko_id} добавлено в избранное"}
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+def remove_nko_from_favorites(user_id: int, nko_id: int, db: Session) -> dict:
+    """
+    Удаление НКО из избранного пользователя
+
+    Args:
+        user_id: ID пользователя
+        nko_id: ID НКО
+        db: Сессия базы данных
+
+    Returns:
+        Словарь с сообщением об успешном удалении
+
+    Raises:
+        HTTPException: Если НКО не найдено в избранном
+    """
+    from models import FavoriteNKOInDB
+    
+    try:
+        # Проверяем существование в избранном
+        favorite = db.query(FavoriteNKOInDB).filter(
+            FavoriteNKOInDB.user_id == user_id,
+            FavoriteNKOInDB.nko_id == nko_id
+        ).first()
+        
+        if not favorite:
+            raise HTTPException(status_code=404, detail="НКО не найдено в избранном")
+        
+        # Удаляем из избранного
+        db.delete(favorite)
+        db.commit()
+        
+        return {"message": f"НКО с ID {nko_id} удалено из избранного"}
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+def get_favorite_nko(user_id: int, db: Session) -> List[NKOResponse]:
+    """
+    Получение списка избранных НКО пользователя
+
+    Args:
+        user_id: ID пользователя
+        db: Сессия базы данных
+
+    Returns:
+        Список избранных НКО с их категориями
+    """
+    from models import FavoriteNKOInDB
+    
+    try:
+        # Запрос избранных НКО с JOIN
+        query = (
+            db.query(NKOInDB, CityInDB.name.label("city_name"))
+            .join(CityInDB, NKOInDB.city_id == CityInDB.id)
+            .join(FavoriteNKOInDB, NKOInDB.id == FavoriteNKOInDB.nko_id)
+            .filter(FavoriteNKOInDB.user_id == user_id)
+            .order_by(NKOInDB.created_at.desc())
+        )
+        
+        rows = query.all()
+        
+        # Получение категорий для каждого НКО
+        nko_list = []
+        for nko, city_name in rows:
+            # Запрос категорий для текущего НКО
+            categories = (
+                db.query(NKOCategoryInDB.name)
+                .join(NKOCategoriesLinkInDB, NKOCategoryInDB.id == NKOCategoriesLinkInDB.category_id)
+                .filter(NKOCategoriesLinkInDB.nko_id == nko.id)
+                .all()
+            )
+            categories = [cat[0] for cat in categories]
+            
+            # Извлечение координат из POINT
+            if nko.coords and isinstance(nko.coords, (tuple, list)) and len(nko.coords) == 2:
+                latitude, longitude = float(nko.coords[0]), float(nko.coords[1])
+            else:
+                latitude, longitude = 0.0, 0.0
+            
+            nko_data = NKOResponse(
+                id=nko.id,
+                name=nko.name,
+                description=nko.description,
+                logo=nko.logo,
+                address=nko.address,
+                city=city_name,
+                latitude=latitude,
+                longitude=longitude,
+                meta=nko.meta if nko.meta else None,
+                created_at=nko.created_at.isoformat() if nko.created_at else None,
+                categories=categories,
+            )
+            nko_list.append(nko_data)
+        
+        return nko_list
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

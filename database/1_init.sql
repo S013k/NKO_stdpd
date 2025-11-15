@@ -111,3 +111,30 @@ CREATE TABLE IF NOT EXISTS events_categories_link (
     FOREIGN KEY (events_id) REFERENCES events(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES events_categories(id) ON DELETE RESTRICT
 );
+
+
+-- Таблица избранных новостей
+CREATE TABLE IF NOT EXISTS favorite_news (
+    user_id BIGINT NOT NULL,
+    news_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, news_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Таблица избранных мероприятий
+CREATE TABLE IF NOT EXISTS favorite_events (
+    user_id BIGINT NOT NULL,
+    event_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, event_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+-- Таблица избранных НКО
+CREATE TABLE IF NOT EXISTS favorite_nko (
+    user_id BIGINT NOT NULL,
+    nko_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, nko_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (nko_id) REFERENCES nko(id) ON DELETE CASCADE
+);

@@ -102,3 +102,28 @@ INSERT INTO events (nko_id, name, description, address, picture, coords, starts_
 INSERT INTO events_categories_link (events_id, category_id) VALUES
 (1, 1), (1, 7), (2, 1), (2, 8), (3, 2), (3, 10), (4, 3), (5, 2), (5, 7), (6, 2), (7, 3), (7, 4), (8, 1), (8, 7),
 (9, 3), (9, 7), (10, 3), (10, 9), (11, 3), (11, 9), (12, 1), (12, 10);
+
+
+-- Заполнение таблицы favorite_news (пока нет таблицы news, добавим примеры с произвольными ID)
+INSERT INTO favorite_news (user_id, news_id) VALUES
+(3, 1), (3, 2), (3, 5),
+(4, 1), (4, 3),
+(7, 2), (7, 4), (7, 6),
+(9, 1), (9, 5),
+(10, 3), (10, 4);
+
+-- Заполнение таблицы favorite_events
+INSERT INTO favorite_events (user_id, event_id) VALUES
+(3, 1), (3, 4), (3, 7),
+(4, 1), (4, 9), (4, 10),
+(7, 4), (7, 7),
+(9, 1), (9, 4), (9, 9),
+(10, 7), (10, 10), (10, 11);
+
+-- Заполнение таблицы favorite_nko
+INSERT INTO favorite_nko (user_id, nko_id) VALUES
+(3, 1), (3, 2), (3, 4), (3, 10),
+(4, 1), (4, 7), (4, 12),
+(7, 3), (7, 4), (7, 17),
+(9, 1), (9, 6), (9, 9), (9, 14),
+(10, 2), (10, 11), (10, 18);
