@@ -467,7 +467,7 @@
     padding: var(--spacing-sm);
     min-width: 200px;
     box-shadow: var(--shadow-lg);
-    z-index: 50;
+    z-index: 9999;
     margin-top: var(--spacing-xs);
   }
 

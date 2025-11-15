@@ -65,14 +65,6 @@ export function UserAvatar({
           />
         )}
       </div>
-      
-      {/* Tooltip с информацией о пользователе */}
-      <div className="user-dropdown">
-        <div className="user-info">
-          <div className="user-name">{user.full_name}</div>
-          <div className="user-role">@{user.login}</div>
-        </div>
-      </div>
     </div>
   )
 }
