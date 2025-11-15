@@ -1,35 +1,47 @@
-from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-import auth
+from auth import (
+    User, UserCreate, Token, oauth2_scheme,
+    register_user, login_for_access_token,
+    get_current_user, read_users_me
+)
 from config import settings
 from database import close_db, get_db, init_db
 from nko import NKOFilterRequest, NKOResponse, fetch_nko
 from s3 import router as s3_router
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Управление жизненным циклом приложения"""
-    # Startup
-    await init_db()
-    yield
-    # Shutdown
-    await close_db()
+def lifespan_startup():
+    """Инициализация при запуске приложения"""
+    init_db()
+
+
+def lifespan_shutdown():
+    """Очистка при остановке приложения"""
+    close_db()
 
 
 app = FastAPI(
     title="НКО Добрые дела Росатома API",
     description="Backend API для портала Добрые дела Росатома",
     version="1.0.0",
-    lifespan=lifespan,
 )
+
+# События жизненного цикла
+@app.on_event("startup")
+def startup_event():
+    lifespan_startup()
+
+@app.on_event("shutdown")
+def shutdown_event():
+    lifespan_shutdown()
 
 # CORS настройки
 app.add_middleware(
@@ -42,7 +54,6 @@ app.add_middleware(
 
 # Подключаем S3 роутеры
 app.include_router(s3_router, prefix="/s3", tags=["S3 Storage"])
-app.include_router(auth.router)
 
 
 class PingResponse(BaseModel):
@@ -76,7 +87,7 @@ async def health_check():
 
 
 @app.post("/nko", response_model=List[NKOResponse])
-async def get_nko(filters: NKOFilterRequest, db: AsyncSession = Depends(get_db)):
+def get_nko(filters: NKOFilterRequest, db: Session = Depends(get_db)):
     """
     Получение списка НКО с фильтрацией
 
@@ -87,7 +98,27 @@ async def get_nko(filters: NKOFilterRequest, db: AsyncSession = Depends(get_db))
     Returns:
         Список НКО с их категориями
     """
-    return await fetch_nko(filters, db)
+    return fetch_nko(filters, db)
+
+
+# Auth endpoints
+@app.post("/auth/register", response_model=User, tags=["Authentication"])
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    """Регистрация нового пользователя"""
+    return register_user(user, db)
+
+
+@app.post("/auth/login", response_model=Token, tags=["Authentication"])
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """Вход пользователя и получение токена"""
+    return login_for_access_token(form_data, db)
+
+
+@app.get("/users/me/", response_model=User, tags=["Users"])
+def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Получение информации о текущем пользователе"""
+    current_user = get_current_user(token, db)
+    return read_users_me(current_user)
 
 
 if __name__ == "__main__":

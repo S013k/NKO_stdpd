@@ -1,14 +1,12 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 import security
-from database import get_db
 from models import UserInDB, UsersRoles
 
 
@@ -36,19 +34,16 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     login: Optional[str] = None
 
-router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
-async def get_user(db: AsyncSession, login: str):
-    result = await db.execute(select(UserInDB).filter(UserInDB.login == login))
-    return result.scalar_one_or_none()
+def get_user(db: Session, login: str):
+    return db.query(UserInDB).filter(UserInDB.login == login).first()
 
 
-@router.post("/auth/register", response_model=User)
-async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    db_user = await get_user(db, login=user.login)
+def register_user(user: UserCreate, db: Session):
+    db_user = get_user(db, login=user.login)
     if db_user:
         raise HTTPException(status_code=400, detail="Login already registered")
 
@@ -62,16 +57,13 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
         salt=salt,
     )
     db.add(db_user)
-    await db.commit()
-    await db.refresh(db_user)
+    db.commit()
+    db.refresh(db_user)
     return db_user
 
 
-@router.post("/auth/login", response_model=Token)
-async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
-):
-    user = await get_user(db, login=form_data.username)
+def login_for_access_token(form_data: OAuth2PasswordRequestForm, db: Session):
+    user = get_user(db, login=form_data.username)
     if not user or not security.verify_password(
         form_data.password, user.salt, user.hash
     ):
@@ -84,9 +76,7 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
-):
+def get_current_user(token: str, db: Session):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -102,12 +92,11 @@ async def get_current_user(
         token_data = TokenData(login=login)
     except JWTError:
         raise credentials_exception
-    user = await get_user(db, login=token_data.login)
+    user = get_user(db, login=token_data.login)
     if user is None:
         raise credentials_exception
     return user
 
 
-@router.get("/users/me/", response_model=User)
-async def read_users_me(current_user: User = Depends(get_current_user)):
+def read_users_me(current_user: User):
     return current_user
