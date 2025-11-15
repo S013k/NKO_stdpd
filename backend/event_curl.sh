@@ -117,10 +117,11 @@ curl -X POST http://localhost/api/event/7/favorite \
 
 echo -e "\n"
 
-# Получение списка избранных мероприятий
-echo "6. Получение списка избранных мероприятий..."
-curl -X GET http://localhost/api/event/favorites \
-  -H "Authorization: Bearer $TOKEN"
+# Получение списка избранных мероприятий через фильтр
+echo "6. Получение списка избранных мероприятий (должны быть ID 1, 4, 7)..."
+curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=$TOKEN" \
+  --data-urlencode "favorite=true"
 
 echo -e "\n"
 
@@ -131,15 +132,8 @@ curl -X DELETE http://localhost/api/event/4/favorite \
 
 echo -e "\n"
 
-# Получение обновленного списка избранных мероприятий
-echo "8. Получение обновленного списка избранных мероприятий..."
-curl -X GET http://localhost/api/event/favorites \
-  -H "Authorization: Bearer $TOKEN"
-
-echo -e "\n"
-
-# Получение мероприятий с фильтром по избранным
-echo "9. Получение мероприятий с фильтром по избранным..."
+# Получение обновленного списка избранных мероприятий через фильтр
+echo "8. Получение обновленного списка избранных мероприятий (должны быть только ID 1 и 7)..."
 curl -G "http://localhost/api/event" \
   --data-urlencode "jwt_token=$TOKEN" \
   --data-urlencode "favorite=true"

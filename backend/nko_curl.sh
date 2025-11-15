@@ -89,10 +89,11 @@ curl -X POST http://localhost/api/nko/5/favorite \
 
 echo -e "\n"
 
-# Получение списка избранных НКО
-echo "6. Получение списка избранных НКО..."
-curl -X GET http://localhost/api/nko/favorites \
-  -H "Authorization: Bearer $TOKEN"
+# Получение списка избранных НКО через фильтр
+echo "6. Получение списка избранных НКО (должны быть ID 1, 2, 5)..."
+curl -G "http://localhost/api/nko" \
+  --data-urlencode "jwt_token=$TOKEN" \
+  --data-urlencode "favorite=true"
 
 echo -e "\n"
 
@@ -103,15 +104,8 @@ curl -X DELETE http://localhost/api/nko/2/favorite \
 
 echo -e "\n"
 
-# Получение обновленного списка избранных НКО
-echo "8. Получение обновленного списка избранных НКО..."
-curl -X GET http://localhost/api/nko/favorites \
-  -H "Authorization: Bearer $TOKEN"
-
-echo -e "\n"
-
-# Получение НКО с фильтром по избранным
-echo "9. Получение НКО с фильтром по избранным..."
+# Получение обновленного списка избранных НКО через фильтр
+echo "8. Получение обновленного списка избранных НКО (должны быть только ID 1 и 5)..."
 curl -G "http://localhost/api/nko" \
   --data-urlencode "jwt_token=$TOKEN" \
   --data-urlencode "favorite=true"
