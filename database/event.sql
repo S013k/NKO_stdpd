@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS events_categories (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TYPE events_states AS ENUM ('nko', 'admin', 'moder', 'user');
+CREATE TYPE events_states AS ENUM ('draft', 'approved', 'rejected', 'review');
 
 CREATE TABLE IF NOT EXISTS events (
     id BIGSERIAL PRIMARY KEY,
