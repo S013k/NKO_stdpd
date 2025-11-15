@@ -250,7 +250,9 @@ export default function HomePage() {
     return (
       <div className="min-h-screen bg-white p-8">
         <h1 className="text-4xl font-bold text-red-600 mb-4">Ошибка</h1>
-        <pre className="text-red-500">{error.message}</pre>
+        <pre className="text-red-500">
+          {error instanceof Error ? error.message : 'Произошла неизвестная ошибка'}
+        </pre>
       </div>
     )
   }
