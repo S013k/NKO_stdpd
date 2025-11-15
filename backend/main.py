@@ -228,6 +228,16 @@ def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     return read_users_me(current_user)
 
 
+@app.get("/event/favorites", response_model=List[EventResponse], tags=["Favorites"])
+def get_favorite_events_list(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Получение списка избранных мероприятий"""
+    current_user = get_current_user(token, db)
+    return get_favorite_events(current_user.id, db)
+
+
 @app.get("/event", response_model=List[EventResponse], tags=["Events"])
 def get_events(
     jwt_token: str,
@@ -315,6 +325,16 @@ def remove_event(event_id: int, db: Session = Depends(get_db)):
     return delete_event(event_id, db)
 
 # Favorites endpoints
+@app.get("/nko/favorites", response_model=List[NKOResponse], tags=["Favorites"])
+def get_favorite_nko_list(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Получение списка избранных НКО"""
+    current_user = get_current_user(token, db)
+    return get_favorite_nko(current_user.id, db)
+
+
 @app.post("/nko/{nko_id}/favorite", tags=["Favorites"])
 def add_nko_favorite(
     nko_id: int,
@@ -337,16 +357,6 @@ def remove_nko_favorite(
     return remove_nko_from_favorites(current_user.id, nko_id, db)
 
 
-@app.get("/nko/favorites", response_model=List[NKOResponse], tags=["Favorites"])
-def get_favorite_nko_list(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    """Получение списка избранных НКО"""
-    current_user = get_current_user(token, db)
-    return get_favorite_nko(current_user.id, db)
-
-
 @app.post("/event/{event_id}/favorite", tags=["Favorites"])
 def add_event_favorite(
     event_id: int,
@@ -367,16 +377,6 @@ def remove_event_favorite(
     """Удаление мероприятия из избранного"""
     current_user = get_current_user(token, db)
     return remove_event_from_favorites(current_user.id, event_id, db)
-
-
-@app.get("/event/favorites", response_model=List[EventResponse], tags=["Favorites"])
-def get_favorite_events_list(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    """Получение списка избранных мероприятий"""
-    current_user = get_current_user(token, db)
-    return get_favorite_events(current_user.id, db)
 
 
 
