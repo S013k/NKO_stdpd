@@ -1,4 +1,6 @@
-from typing import List
+from pydantic_settings import BaseSettings
+from typing import List, Union
+import os
 
 from pydantic_settings import BaseSettings
 
@@ -12,10 +14,22 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
-
-    # CORS
-    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:3001"]
-
+    
+    # CORS - Handle both comma-separated and JSON formats
+    @property
+    def cors_origins(self) -> List[str]:
+        cors_env = os.getenv("CORS_ORIGINS", "")
+        if not cors_env:
+            return ["http://localhost:3000", "http://localhost:3001"]
+        
+        # Try to parse as JSON first
+        try:
+            import json
+            return json.loads(cors_env)
+        except (json.JSONDecodeError, TypeError):
+            # Fall back to comma-separated format
+            return [origin.strip() for origin in cors_env.split(",") if origin.strip()]
+    
     # MinIO/S3 Configuration
     minio_endpoint: str = "localhost:9990"
     minio_access_key: str = "admin"
@@ -56,10 +70,12 @@ class Settings(BaseSettings):
     def is_valid_bucket(self, bucket_name: str) -> bool:
         """Проверка валидности имени бакета"""
         return bucket_name in self.buckets
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    
+    model_config = {
+        "extra": "ignore",
+        "env_file": ".env",
+        "case_sensitive": False
+    }
 
 
 settings = Settings()
