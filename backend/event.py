@@ -115,12 +115,19 @@ def fetch_events(filters: EventFilterRequest, db: Session) -> List[EventResponse
         if filters.time_to:
             query = query.filter(EventInDB.finish_at <= filters.time_to)
         
-        # TODO: Фильтр по избранным (требует таблицы favorites и user_id из JWT)
-        # if filters.favorite and filters.jwt_token:
-        #     user_id = decode_jwt(filters.jwt_token)
-        #     query = query.filter(exists().where(
-        #         and_(Favorites.event_id == EventInDB.id, Favorites.user_id == user_id)
-        #     ))
+        # Фильтр по избранным
+        if filters.favorite and filters.jwt_token:
+            from models import FavoriteEventsInDB
+            from auth import jwt_decode
+            try:
+                payload = jwt_decode(filters.jwt_token)
+                user_id = payload.get("id")
+                if user_id:
+                    query = query.join(FavoriteEventsInDB, EventInDB.id == FavoriteEventsInDB.event_id)
+                    query = query.filter(FavoriteEventsInDB.user_id == user_id)
+            except Exception:
+                # Если токен невалидный, просто игнорируем фильтр
+                pass
         
         # Сортировка по дате создания
         query = query.order_by(EventInDB.created_at.desc())
@@ -375,4 +382,162 @@ def delete_event(event_id: int, db: Session) -> dict:
         raise
     except Exception as e:
         db.rollback()
+
+
+def add_event_to_favorites(user_id: int, event_id: int, db: Session) -> dict:
+    """
+    Добавление мероприятия в избранное пользователя
+
+    Args:
+        user_id: ID пользователя
+        event_id: ID мероприятия
+        db: Сессия базы данных
+
+    Returns:
+        Словарь с сообщением об успешном добавлении
+
+    Raises:
+        HTTPException: Если мероприятие не найдено или уже в избранном
+    """
+    from models import FavoriteEventsInDB
+    
+    try:
+        # Проверяем существование мероприятия
+        event = db.query(EventInDB).filter(EventInDB.id == event_id).first()
+        if not event:
+            raise HTTPException(status_code=404, detail=f"Мероприятие с ID {event_id} не найдено")
+        
+        # Проверяем, не добавлено ли уже в избранное
+        existing = db.query(FavoriteEventsInDB).filter(
+            FavoriteEventsInDB.user_id == user_id,
+            FavoriteEventsInDB.event_id == event_id
+        ).first()
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Мероприятие уже в избранном")
+        
+        # Добавляем в избранное
+        favorite = FavoriteEventsInDB(user_id=user_id, event_id=event_id)
+        db.add(favorite)
+        db.commit()
+        
+        return {"message": f"Мероприятие с ID {event_id} добавлено в избранное"}
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+def remove_event_from_favorites(user_id: int, event_id: int, db: Session) -> dict:
+    """
+    Удаление мероприятия из избранного пользователя
+
+    Args:
+        user_id: ID пользователя
+        event_id: ID мероприятия
+        db: Сессия базы данных
+
+    Returns:
+        Словарь с сообщением об успешном удалении
+
+    Raises:
+        HTTPException: Если мероприятие не найдено в избранном
+    """
+    from models import FavoriteEventsInDB
+    
+    try:
+        # Проверяем существование в избранном
+        favorite = db.query(FavoriteEventsInDB).filter(
+            FavoriteEventsInDB.user_id == user_id,
+            FavoriteEventsInDB.event_id == event_id
+        ).first()
+        
+        if not favorite:
+            raise HTTPException(status_code=404, detail="Мероприятие не найдено в избранном")
+        
+        # Удаляем из избранного
+        db.delete(favorite)
+        db.commit()
+        
+        return {"message": f"Мероприятие с ID {event_id} удалено из избранного"}
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+def get_favorite_events(user_id: int, db: Session) -> List[EventResponse]:
+    """
+    Получение списка избранных мероприятий пользователя
+
+    Args:
+        user_id: ID пользователя
+        db: Сессия базы данных
+
+    Returns:
+        Список избранных мероприятий с их категориями
+    """
+    from models import FavoriteEventsInDB
+    
+    try:
+        # Запрос избранных мероприятий с JOIN
+        query = (
+            db.query(EventInDB, NKOInDB.name.label("nko_name"))
+            .join(NKOInDB, EventInDB.nko_id == NKOInDB.id)
+            .join(FavoriteEventsInDB, EventInDB.id == FavoriteEventsInDB.event_id)
+            .filter(FavoriteEventsInDB.user_id == user_id)
+            .order_by(EventInDB.created_at.desc())
+        )
+        
+        rows = query.all()
+        
+        # Получение категорий для каждого мероприятия
+        event_list = []
+        for event, nko_name in rows:
+            # Запрос категорий для текущего мероприятия
+            categories = (
+                db.query(EventsCategoryInDB.name)
+                .join(EventsCategoriesLinkInDB, EventsCategoryInDB.id == EventsCategoriesLinkInDB.category_id)
+                .filter(EventsCategoriesLinkInDB.events_id == event.id)
+                .all()
+            )
+            categories = [cat[0] for cat in categories]
+            
+            # Извлечение координат из POINT
+            if event.coords and isinstance(event.coords, (tuple, list)) and len(event.coords) == 2:
+                latitude, longitude = float(event.coords[0]), float(event.coords[1])
+            else:
+                latitude, longitude = None, None
+            
+            event_data = EventResponse(
+                id=event.id,
+                nko_id=event.nko_id,
+                nko_name=nko_name,
+                name=event.name,
+                description=event.description,
+                address=event.address,
+                picture=event.picture,
+                latitude=latitude,
+                longitude=longitude,
+                starts_at=event.starts_at.isoformat() if event.starts_at else None,
+                finish_at=event.finish_at.isoformat() if event.finish_at else None,
+                created_by=event.created_by,
+                approved_by=event.approved_by,
+                state=event.state.value if hasattr(event.state, 'value') else str(event.state),
+                meta=event.meta,
+                created_at=event.created_at.isoformat() if event.created_at else None,
+                categories=categories,
+            )
+            event_list.append(event_data)
+        
+        return event_list
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

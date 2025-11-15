@@ -131,3 +131,20 @@ class EventsCategoriesLinkInDB(Base):
     events_id = Column(BigInteger, ForeignKey("events.id", ondelete="CASCADE"), primary_key=True)
     category_id = Column(SmallInteger, ForeignKey("events_categories.id", ondelete="RESTRICT"), primary_key=True)
 
+class FavoriteNewsInDB(Base):
+    __tablename__ = "favorite_news"
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    news_id = Column(BigInteger, primary_key=True)
+
+
+class FavoriteEventsInDB(Base):
+    __tablename__ = "favorite_events"
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    event_id = Column(BigInteger, ForeignKey("events.id", ondelete="CASCADE"), primary_key=True)
+
+
+class FavoriteNKOInDB(Base):
+    __tablename__ = "favorite_nko"
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    nko_id = Column(BigInteger, ForeignKey("nko.id", ondelete="CASCADE"), primary_key=True)
+

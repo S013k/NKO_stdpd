@@ -14,9 +14,17 @@ from auth import (
 )
 from config import settings
 from database import close_db, get_db, init_db
-from nko import NKOFilterRequest, NKOCreateRequest, NKOResponse, fetch_nko, fetch_nko_by_id, create_nko, delete_nko
+from nko import (
+    NKOFilterRequest, NKOCreateRequest, NKOResponse,
+    fetch_nko, fetch_nko_by_id, create_nko, delete_nko,
+    add_nko_to_favorites, remove_nko_from_favorites, get_favorite_nko
+)
 from city import CityCreateRequest, CityResponse, create_city, delete_city, fetch_cities, fetch_city_by_id
-from event import EventFilterRequest, EventCreateRequest, EventResponse, fetch_events, fetch_event_by_id, create_event, delete_event
+from event import (
+    EventFilterRequest, EventCreateRequest, EventResponse,
+    fetch_events, fetch_event_by_id, create_event, delete_event,
+    add_event_to_favorites, remove_event_from_favorites, get_favorite_events
+)
 from s3 import router as s3_router
 
 
@@ -305,6 +313,51 @@ def remove_event(event_id: int, db: Session = Depends(get_db)):
         Сообщение об успешном удалении
     """
     return delete_event(event_id, db)
+
+# Favorites endpoints
+@app.post("/nko/{nko_id}/favorite", tags=["Favorites"])
+def add_nko_favorite(
+    nko_id: int,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Добавление НКО в избранное"""
+    current_user = get_current_user(token, db)
+    return add_nko_to_favorites(current_user.id, nko_id, db)
+
+
+@app.delete("/nko/{nko_id}/favorite", tags=["Favorites"])
+def remove_nko_favorite(
+    nko_id: int,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Удаление НКО из избранного"""
+    current_user = get_current_user(token, db)
+    return remove_nko_from_favorites(current_user.id, nko_id, db)
+
+
+@app.post("/event/{event_id}/favorite", tags=["Favorites"])
+def add_event_favorite(
+    event_id: int,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Добавление мероприятия в избранное"""
+    current_user = get_current_user(token, db)
+    return add_event_to_favorites(current_user.id, event_id, db)
+
+
+@app.delete("/event/{event_id}/favorite", tags=["Favorites"])
+def remove_event_favorite(
+    event_id: int,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Удаление мероприятия из избранного"""
+    current_user = get_current_user(token, db)
+    return remove_event_from_favorites(current_user.id, event_id, db)
+
 
 
 if __name__ == "__main__":

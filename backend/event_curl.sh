@@ -72,4 +72,71 @@ curl -X POST http://localhost/api/event \
   }'
 
 # Удаление события по ID
+
+echo "=== Тестирование избранного для мероприятий ==="
+
+# Регистрация нового пользователя для тестирования
+echo "1. Регистрация нового пользователя..."
+curl -X POST http://localhost/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "Тестовый Пользователь События",
+    "login": "test_events_user",
+    "password": "test123",
+    "role": "user"
+  }'
+
+echo -e "\n"
+
+# Получение токена
+echo "2. Получение токена..."
+TOKEN=$(curl -X POST http://localhost/api/auth/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=test_events_user&password=test123" \
+  | jq -r '.access_token')
+
+echo "Токен: $TOKEN"
+echo -e "\n"
+
+# Добавление мероприятий в избранное
+echo "3. Добавление мероприятия с ID 1 в избранное..."
+curl -X POST http://localhost/api/event/1/favorite \
+  -H "Authorization: Bearer $TOKEN"
+
+echo -e "\n"
+
+echo "4. Добавление мероприятия с ID 4 в избранное..."
+curl -X POST http://localhost/api/event/4/favorite \
+  -H "Authorization: Bearer $TOKEN"
+
+echo -e "\n"
+
+echo "5. Добавление мероприятия с ID 7 в избранное..."
+curl -X POST http://localhost/api/event/7/favorite \
+  -H "Authorization: Bearer $TOKEN"
+
+echo -e "\n"
+
+# Получение списка избранных мероприятий через фильтр
+echo "6. Получение списка избранных мероприятий (должны быть ID 1, 4, 7)..."
+curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=$TOKEN" \
+  --data-urlencode "favorite=true"
+
+echo -e "\n"
+
+# Удаление мероприятия из избранного
+echo "7. Удаление мероприятия с ID 4 из избранного..."
+curl -X DELETE http://localhost/api/event/4/favorite \
+  -H "Authorization: Bearer $TOKEN"
+
+echo -e "\n"
+
+# Получение обновленного списка избранных мероприятий через фильтр
+echo "8. Получение обновленного списка избранных мероприятий (должны быть только ID 1 и 7)..."
+curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=$TOKEN" \
+  --data-urlencode "favorite=true"
+
+echo -e "\n"
 curl -X DELETE http://localhost/api/event/1

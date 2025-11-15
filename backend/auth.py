@@ -72,7 +72,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm, db: Session):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token = security.create_access_token(data={"sub": user.login})
+    access_token = security.create_access_token(data={"sub": user.login, "id": user.id})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -82,16 +82,11 @@ def get_current_user(token: str, db: Session):
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(
-            token, security.SECRET_KEY, algorithms=[security.ALGORITHM]
-        )
-        login: str = payload.get("sub")
-        if login is None:
-            raise credentials_exception
-        token_data = TokenData(login=login)
-    except JWTError:
+    payload = jwt_decode(token)
+    login: str = payload.get("sub")
+    if login is None:
         raise credentials_exception
+    token_data = TokenData(login=login)
     user = get_user(db, login=token_data.login)
     if user is None:
         raise credentials_exception
@@ -100,3 +95,11 @@ def get_current_user(token: str, db: Session):
 
 def read_users_me(current_user: User):
     return current_user
+
+def jwt_decode(token: str):
+    try:
+        return jwt.decode(
+            token, security.SECRET_KEY, algorithms=[security.ALGORITHM]
+        )
+    except JWTError:
+        raise credentials_exception
