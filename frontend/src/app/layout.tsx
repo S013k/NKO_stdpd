@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 // Temporarily commented out to test if this is causing the error
 // import { TwentyFirstToolbar } from "@21st-extension/toolbar-next";
 // import { ReactPlugin } from "@21st-extension/react";
@@ -67,7 +68,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         {/* Temporarily commented out to test if this is causing the error */}
         {/* <TwentyFirstToolbar
           config={{

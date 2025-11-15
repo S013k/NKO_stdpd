@@ -7,13 +7,20 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RosatomLogo } from '@/components/RosatomLogo'
 import { cities } from '@/data/nko'
+import { useAuth } from '@/contexts/AuthContext'
+import { LoginModal } from '@/components/auth/LoginModal'
+import { RegisterModal } from '@/components/auth/RegisterModal'
+import { UserDropdown } from '@/components/auth/UserDropdown'
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedCity, setSelectedCity] = useState('Москва')
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const { user, isLoading } = useAuth()
 
   return (
-    <header className="bg-white border-b border-[var(--color-border)] sticky top-0 z-50">
+    <header className="bg-background border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Логотип */}
@@ -29,47 +36,55 @@ export function Header() {
 
           {/* Десктопная навигация */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link 
-              href="/nko" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/nko"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               НКО
             </Link>
-            <Link 
-              href="/news" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/news"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               Новости
             </Link>
-            <Link 
-              href="/knowledge" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/knowledge"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               База знаний
             </Link>
-            <Link 
-              href="/calendar" 
-              className="text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors font-medium"
+            <Link
+              href="/calendar"
+              className="text-secondary hover:text-primary transition-colors font-medium"
             >
               Календарь
             </Link>
           </nav>
 
-          {/* Выбор города */}
+          {/* Авторизация или выбор города */}
           <div className="hidden md:flex items-center space-x-2">
-            <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
-            <Select value={selectedCity} onValueChange={setSelectedCity}>
-              <SelectTrigger className="w-32 border-[var(--color-border)] focus:ring-[var(--color-primary)]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isLoading ? (
+              <div className="w-20 h-8 bg-gray-200 rounded animate-pulse"></div>
+            ) : user ? (
+              <UserDropdown />
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowLoginModal(true)}
+                  className="border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white"
+                >
+                  Войти
+                </Button>
+                <Button
+                  onClick={() => setShowRegisterModal(true)}
+                  className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white"
+                >
+                  Зарегистрироваться
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Мобильное меню */}
@@ -118,26 +133,52 @@ export function Header() {
                 Календарь
               </Link>
               
-              {/* Мобильный выбор города */}
+              {/* Мобильная авторизация или выбор города */}
               <div className="flex items-center space-x-2 pt-2 border-t border-[var(--color-border)]">
-                <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
-                <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger className="w-32 border-[var(--color-border)] focus:ring-[var(--color-primary)]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cities.map((city) => (
-                      <SelectItem key={city} value={city}>
-                        {city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoading ? (
+                  <div className="w-20 h-8 bg-gray-200 rounded animate-pulse"></div>
+                ) : user ? (
+                  <UserDropdown />
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowLoginModal(true)}
+                      className="border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white"
+                    >
+                      Войти
+                    </Button>
+                    <Button
+                      onClick={() => setShowRegisterModal(true)}
+                      className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white"
+                    >
+                      Зарегистрироваться
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
         )}
       </div>
+
+      {/* Модальные окна авторизации */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSwitchToRegister={() => {
+          setShowLoginModal(false)
+          setShowRegisterModal(true)
+        }}
+      />
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSwitchToLogin={() => {
+          setShowRegisterModal(false)
+          setShowLoginModal(true)
+        }}
+      />
     </header>
   )
 }
