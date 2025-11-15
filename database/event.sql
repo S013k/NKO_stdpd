@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS events_categories (
     id SMALLSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ DEFAULT now()
+    name VARCHAR(100) NOT NULL UNIQUE
+    description VARCHAR(100) NOT NULL UNIQUE
 );
 
 CREATE TYPE events_states AS ENUM ('draft', 'approved', 'rejected', 'review');
