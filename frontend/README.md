@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Фронтенд социальных инициатив Росатома
 
-## Getting Started
+Это [Next.js](https://nextjs.org) проект для платформы социальных инициатив Росатома, созданный с помощью [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-First, run the development server:
+## Запуск в Docker
+
+### Быстрый старт с Docker Compose
+
+Самый простой способ запустить приложение - использовать Docker Compose:
+
+```bash
+# Из корневой директории проекта
+docker-compose up -d
+```
+
+Приложение будет доступно по адресу [http://localhost:3000](http://localhost:3000).
+
+### Остановка контейнера
+
+```bash
+docker-compose down
+```
+
+### Пересборка образа
+
+```bash
+docker-compose build --no-cache
+```
+
+### Просмотр логов
+
+```bash
+docker-compose logs frontend
+```
+
+## Локальная разработка
+
+Для локальной разработки без Docker:
+
+### Установка зависимостей
+
+```bash
+npm install
+```
+
+### Запуск сервера разработки
 
 ```bash
 npm run dev
-# or
+# или
 yarn dev
-# or
+# или
 pnpm dev
-# or
+# или
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте [http://localhost:3000](http://localhost:3000) в браузере для просмотра результата.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Сборка для продакшена
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Структура Docker
 
-To learn more about Next.js, take a look at the following resources:
+Проект использует многоэтапную сборку Docker:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **base**: Базовый образ с Node.js и зависимостями
+- **deps**: Установка всех зависимостей для сборки
+- **builder**: Сборка приложения с Next.js
+- **runner**: Финальный образ для продакшена с оптимизированным размером
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Особенности конфигурации
 
-## Deploy on Vercel
+- Используется Node.js 20 Alpine для соответствия требованиям Next.js 16
+- Включен `output: 'standalone'` в `next.config.ts` для оптимизации Docker образа
+- Создан пользователь с ограниченными правами для безопасности
+- Настроены health checks для мониторинга состояния контейнера
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Разработка
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Вы можете начать редактирование страницы, изменяя файл `app/page.tsx`. Страница автоматически обновляется при сохранении изменений.
+
+Проект использует [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) для автоматической оптимизации и загрузки шрифтов.
+
+## Дополнительная информация
+
+### Переменные окружения
+
+- `NODE_ENV`: Устанавливается в `production` в Docker
+- `PORT`: Порт приложения (по умолчанию 3000)
+- `HOSTNAME`: Хост для запуска (0.0.0.0 для Docker)
+
+### Полезные команды
+
+```bash
+# Проверка статуса контейнера
+docker-compose ps
+
+# Вход в контейнер для отладки
+docker-compose exec frontend sh
+
+# Перезапуск контейнера
+docker-compose restart frontend
+```
+
+## Изучение Next.js
+
+Чтобы узнать больше о Next.js, ознакомьтесь со следующими ресурсами:
+
+- [Документация Next.js](https://nextjs.org/docs) - изучите возможности и API Next.js
+- [Изучение Next.js](https://nextjs.org/learn) - интерактивное руководство по Next.js
+
+Вы можете посетить [GitHub репозиторий Next.js](https://github.com/vercel/next.js) - ваша обратная связь и вклад приветствуются!
+
+## Развертывание
+
+Простейший способ развернуть Next.js приложение - использовать [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) от создателей Next.js.
+
+Изучите нашу [документацию по развертыванию Next.js](https://nextjs.org/docs/app/building-your-application/deploying) для получения более подробной информации.
