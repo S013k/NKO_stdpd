@@ -165,9 +165,10 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 disabled={isLoading}
-                className={`form-input pl-10 ${
+                className={`form-input pl-10 pr-4 ${
                   errors.login && touched.login ? 'error' : ''
                 }`}
+                style={{ paddingLeft: '40px' }}
               />
             </div>
             {errors.login && touched.login && (
@@ -223,7 +224,7 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
             )}
           </Button>
 
-          <div className="relative">
+          <div className="relative mt-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>

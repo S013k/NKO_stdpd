@@ -262,9 +262,10 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 disabled={isLoading}
-                className={`form-input pl-10 ${
+                className={`form-input pl-10 pr-4 ${
                   errors.full_name && touched.full_name ? 'error' : ''
                 }`}
+                style={{ paddingLeft: '40px' }}
               />
             </div>
             {errors.full_name && touched.full_name && (
@@ -289,11 +290,12 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 disabled={isLoading}
-                className={`pl-10 h-11 ${
+                className={`pl-10 pr-4 h-11 ${
                   errors.login && touched.login
                     ? 'border-red-500 focus-visible:ring-red-500'
                     : 'focus-visible:ring-[#0066B3]'
                 }`}
+                style={{ paddingLeft: '40px' }}
               />
             </div>
             {errors.login && touched.login && (
@@ -415,7 +417,7 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
             )}
           </Button>
 
-          <div className="relative">
+          <div className="relative mt-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>

@@ -102,7 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
+      // Очищаем состояние пользователя
       setUser(null)
+      // Очищаем авторизационные cookie
+      cookies.clearAuthCookies()
+      console.log('DEBUG: User logged out, cookies cleared')
     }
   }
 

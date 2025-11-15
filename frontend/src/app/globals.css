@@ -376,6 +376,10 @@
     min-height: 44px;
   }
 
+  .form-input.pl-10 {
+    padding-left: 40px;
+  }
+
   .form-input:focus {
     outline: none;
     border-color: var(--color-primary);
@@ -583,6 +587,14 @@
       padding: 10px 16px;
       font-size: var(--font-size-sm);
       min-height: 44px;
+    }
+
+    /* Mobile dropdown fixes */
+    .user-dropdown {
+      right: auto;
+      left: 0;
+      min-width: 180px;
+      max-width: calc(100vw - 32px);
     }
   }
 }
