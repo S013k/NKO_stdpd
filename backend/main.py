@@ -16,6 +16,7 @@ from config import settings
 from database import close_db, get_db, init_db
 from nko import NKOFilterRequest, NKOCreateRequest, NKOResponse, fetch_nko, fetch_nko_by_id, create_nko, delete_nko
 from city import CityCreateRequest, CityResponse, create_city, delete_city, fetch_cities, fetch_city_by_id
+from event import EventFilterRequest, EventCreateRequest, EventResponse, fetch_events, fetch_event_by_id, create_event, delete_event
 from s3 import router as s3_router
 
 
@@ -217,6 +218,93 @@ def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """Получение информации о текущем пользователе"""
     current_user = get_current_user(token, db)
     return read_users_me(current_user)
+
+
+@app.get("/event", response_model=List[EventResponse], tags=["Events"])
+def get_events(
+    jwt_token: str,
+    nko_id: Optional[List[int]] = Query(None),
+    favorite: Optional[bool] = None,
+    category: Optional[List[str]] = Query(None),
+    regex: Optional[str] = None,
+    time_from: Optional[str] = None,
+    time_to: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Получение списка событий с фильтрацией
+
+    Args:
+        jwt_token: JWT токен пользователя
+        nko_id: Фильтр по НКО (опционально, можно передать несколько раз)
+        favorite: Фильтр по избранным (опционально, заглушка)
+        category: Фильтр по категориям (опционально, можно передать несколько раз)
+        regex: Регулярное выражение для поиска (опционально)
+        time_from: Фильтр по времени начала события (ISO format, опционально)
+        time_to: Фильтр по времени окончания события (ISO format, опционально)
+        db: Сессия базы данных
+
+    Returns:
+        Список событий с их категориями
+    
+    Example:
+        GET /event?jwt_token=test&nko_id=1&nko_id=2&category=Спорт&time_from=2024-01-01T00:00:00
+    """
+    filters = EventFilterRequest(
+        jwt_token=jwt_token,
+        nko_id=nko_id,
+        favorite=favorite,
+        category=category,
+        regex=regex,
+        time_from=time_from,
+        time_to=time_to
+    )
+    return fetch_events(filters, db)
+
+
+@app.get("/event/{event_id}", response_model=EventResponse, tags=["Events"])
+def get_event_by_id(event_id: int, db: Session = Depends(get_db)):
+    """
+    Получение конкретного события по ID
+
+    Args:
+        event_id: ID события
+        db: Сессия базы данных
+
+    Returns:
+        Данные события с категориями
+    """
+    return fetch_event_by_id(event_id, db)
+
+
+@app.post("/event", response_model=EventResponse, status_code=status.HTTP_201_CREATED, tags=["Events"])
+def add_event(event_data: EventCreateRequest, db: Session = Depends(get_db)):
+    """
+    Создание нового события
+
+    Args:
+        event_data: Данные для создания события
+        db: Сессия базы данных
+
+    Returns:
+        Созданное событие с категориями
+    """
+    return create_event(event_data, db)
+
+
+@app.delete("/event/{event_id}", status_code=status.HTTP_200_OK, tags=["Events"])
+def remove_event(event_id: int, db: Session = Depends(get_db)):
+    """
+    Удаление события по ID
+
+    Args:
+        event_id: ID события для удаления
+        db: Сессия базы данных
+
+    Returns:
+        Сообщение об успешном удалении
+    """
+    return delete_event(event_id, db)
 
 
 if __name__ == "__main__":
