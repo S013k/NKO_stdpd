@@ -2,10 +2,17 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import and_, func, or_, select, text
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from db import get_db
+from database import get_db
+from models import (
+    NKOInDB,
+    CityInDB,
+    NKOCategoryInDB,
+    NKOCategoriesLinkInDB,
+)
 
 
 class NKOFilterRequest(BaseModel):
@@ -50,6 +57,7 @@ async def fetch_nko(filters: NKOFilterRequest, db: AsyncSession) -> List[NKOResp
     # Базовый SQL запрос с агрегацией категорий
 =======
     
+<<<<<<< HEAD
     # Базовый SQL запрос с агрегацией категорий и JOIN с таблицей cities
 >>>>>>> 475e2bf (fix get nko)
     query_parts = [
@@ -123,13 +131,55 @@ async def fetch_nko(filters: NKOFilterRequest, db: AsyncSession) -> List[NKOResp
 
     query_sql = " ".join(query_parts)
 
+=======
+>>>>>>> 4bf97ca (use orm models in nko)
     try:
+        # Базовый запрос с JOIN к городам
+        query = (
+            select(NKOInDB, CityInDB.name.label("city_name"))
+            .join(CityInDB, NKOInDB.city_id == CityInDB.id)
+        )
+        
+        # Фильтр по городу (поиск по имени города)
+        if filters.city:
+            query = query.where(CityInDB.name.ilike(f"%{filters.city}%"))
+        
+        # Фильтр по категориям
+        if filters.category and len(filters.category) > 0:
+            # Подзапрос для фильтрации по категориям
+            subquery = (
+                select(NKOCategoriesLinkInDB.nko_id)
+                .join(NKOCategoryInDB, NKOCategoriesLinkInDB.category_id == NKOCategoryInDB.id)
+                .where(NKOCategoryInDB.name.in_(filters.category))
+            )
+            query = query.where(NKOInDB.id.in_(subquery))
+        
+        # Фильтр по regex (поиск в имени и описании)
+        if filters.regex:
+            query = query.where(
+                or_(
+                    NKOInDB.name.op("~*")(filters.regex),
+                    NKOInDB.description.op("~*")(filters.regex)
+                )
+            )
+        
+        # TODO: Фильтр по избранным (требует таблицы favorites и user_id из JWT)
+        # if filters.favorite and filters.jwt_token:
+        #     user_id = decode_jwt(filters.jwt_token)
+        #     query = query.where(exists(select(1).where(
+        #         and_(Favorites.nko_id == NKOInDB.id, Favorites.user_id == user_id)
+        #     )))
+        
+        # Сортировка по дате создания
+        query = query.order_by(NKOInDB.created_at.desc())
+        
         # Выполнение запроса
-        result = await db.execute(text(query_sql), params)
-        rows = result.fetchall()
-
-        # Преобразование результатов в список объектов NKOResponse
+        result = await db.execute(query)
+        rows = result.all()
+        
+        # Получение категорий для каждого НКО
         nko_list = []
+<<<<<<< HEAD
         for row in rows:
 <<<<<<< HEAD
             # Парсинг координат из POINT типа PostgreSQL
@@ -138,22 +188,40 @@ async def fetch_nko(filters: NKOFilterRequest, db: AsyncSession) -> List[NKOResp
 
 =======
 >>>>>>> 475e2bf (fix get nko)
+=======
+        for nko, city_name in rows:
+            # Запрос категорий для текущего НКО
+            categories_query = (
+                select(NKOCategoryInDB.name)
+                .join(NKOCategoriesLinkInDB, NKOCategoryInDB.id == NKOCategoriesLinkInDB.category_id)
+                .where(NKOCategoriesLinkInDB.nko_id == nko.id)
+            )
+            categories_result = await db.execute(categories_query)
+            categories = [cat[0] for cat in categories_result.all()]
+            
+            # Извлечение координат из POINT
+            # coords в PostgreSQL POINT хранится как строка "(x,y)"
+            coords_str = str(nko.coords) if nko.coords else "(0,0)"
+            coords_str = coords_str.strip("()")
+            latitude, longitude = map(float, coords_str.split(","))
+            
+>>>>>>> 4bf97ca (use orm models in nko)
             nko_data = NKOResponse(
-                id=row.id,
-                name=row.name,
-                description=row.description,
-                logo=row.logo,
-                address=row.address,
-                city=row.city,
-                latitude=float(row.latitude) if row.latitude is not None else 0.0,
-                longitude=float(row.longitude) if row.longitude is not None else 0.0,
-                meta=row.meta if row.meta else None,
-                created_at=row.created_at.isoformat() if row.created_at else None,
-                categories=list(row.categories) if row.categories else [],
+                id=nko.id,
+                name=nko.name,
+                description=nko.description,
+                logo=nko.logo,
+                address=nko.address,
+                city=city_name,
+                latitude=latitude,
+                longitude=longitude,
+                meta=nko.meta if nko.meta else None,
+                created_at=nko.created_at.isoformat() if nko.created_at else None,
+                categories=categories,
             )
             nko_list.append(nko_data)
-
+        
         return nko_list
-
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
