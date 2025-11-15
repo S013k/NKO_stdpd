@@ -230,6 +230,31 @@ paths:
           description: НКО не найдено
         '500':
           description: Ошибка базы данных
+    delete:
+      tags: [НКО (Некоммерческие организации)]
+      summary: Удалить НКО по ID
+      description: Удаление НКО и всех связанных с ним данных (категории)
+      parameters:
+        - name: nkoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: НКО успешно удалено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "НКО с ID 1 успешно удалено"
+        '404':
+          description: НКО не найдено
+        '500':
+          description: Ошибка базы данных
 
   /events:
     get:

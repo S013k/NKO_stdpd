@@ -14,7 +14,7 @@ from auth import (
 )
 from config import settings
 from database import close_db, get_db, init_db
-from nko import NKOFilterRequest, NKOCreateRequest, NKOResponse, fetch_nko, fetch_nko_by_id, create_nko
+from nko import NKOFilterRequest, NKOCreateRequest, NKOResponse, fetch_nko, fetch_nko_by_id, create_nko, delete_nko
 from city import CityCreateRequest, CityResponse, create_city, delete_city, fetch_cities, fetch_city_by_id
 from s3 import router as s3_router
 
@@ -192,6 +192,21 @@ def add_nko(nko_data: NKOCreateRequest, db: Session = Depends(get_db)):
         Созданное НКО с категориями
     """
     return create_nko(nko_data, db)
+
+
+@app.delete("/nko/{nko_id}", status_code=status.HTTP_200_OK)
+def remove_nko(nko_id: int, db: Session = Depends(get_db)):
+    """
+    Удаление НКО по ID
+
+    Args:
+        nko_id: ID НКО для удаления
+        db: Сессия базы данных
+
+    Returns:
+        Сообщение об успешном удалении
+    """
+    return delete_nko(nko_id, db)
 
 
 @app.get("/users/me/", response_model=User, tags=["Users"])

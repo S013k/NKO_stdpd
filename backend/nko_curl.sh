@@ -29,3 +29,6 @@ curl -X POST http://localhost/api/nko \
     "meta": {"url": "https://test-fond.ru", "phone": "+7 (495) 123-45-67"},
     "categories": ["Помощь детям", "Образование"]
   }'
+
+# Удаление НКО по ID
+curl -X DELETE http://localhost/api/nko/1

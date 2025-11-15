@@ -292,3 +292,42 @@ def create_nko(nko_data: NKOCreateRequest, db: Session) -> NKOResponse:
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+def delete_nko(nko_id: int, db: Session) -> dict:
+    """
+    Удаление НКО по ID
+
+    Args:
+        nko_id: ID НКО для удаления
+        db: Сессия базы данных
+
+    Returns:
+        Словарь с сообщением об успешном удалении
+
+    Raises:
+        HTTPException: Если НКО не найдено или произошла ошибка БД
+    """
+    
+    try:
+        # Проверяем существование НКО
+        nko = db.query(NKOInDB).filter(NKOInDB.id == nko_id).first()
+        
+        if not nko:
+            raise HTTPException(status_code=404, detail=f"НКО с ID {nko_id} не найдено")
+        
+        # Удаляем связи с категориями
+        db.query(NKOCategoriesLinkInDB).filter(NKOCategoriesLinkInDB.nko_id == nko_id).delete()
+        
+        # Удаляем само НКО
+        db.delete(nko)
+        db.commit()
+        
+        return {"message": f"НКО с ID {nko_id} успешно удалено"}
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
