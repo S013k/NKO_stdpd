@@ -25,6 +25,7 @@ export interface User {
 
 export interface TokenResponse {
   access_token: string
+  refresh_token: string
   token_type: string
 }
 
@@ -83,11 +84,25 @@ class ApiClient {
     let response = await fetch(url, { ...defaultOptions, ...options })
 
     // Если получили 401, пробуем обновить токен
-    if (response.status === 401 && !endpoint.includes('/auth/login')) {
+    if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
       try {
-        await this.refreshToken()
-        // Повторяем оригинальный запрос
-        response = await fetch(url, { ...defaultOptions, ...options })
+        const refreshResult = await this.refreshToken()
+        if (refreshResult) {
+          // Повторяем оригинальный запрос с новым токеном
+          const newHeaders = { ...headers };
+          newHeaders['Authorization'] = `Bearer ${cookies.getAccessToken()}`;
+          
+          const newOptions = { ...options };
+          if (newOptions.headers) {
+            newOptions.headers = { ...newOptions.headers, ...newHeaders };
+          } else {
+            newOptions.headers = newHeaders;
+          }
+          
+          response = await fetch(url, { ...defaultOptions, ...newOptions })
+        } else {
+          throw new Error('Не удалось обновить токен')
+        }
       } catch (refreshError) {
         // Если не удалось обновить токен, пробрасываем ошибку
         throw new ApiError('Сессия истекла', 401, 'TOKEN_EXPIRED')
@@ -123,30 +138,48 @@ class ApiClient {
     return response.json()
   }
 
-  private async refreshToken(): Promise<void> {
-    // Для обновления токена можно использовать специальный эндпоинт
-    // или просто проверить текущий статус через /users/me
+  private async refreshToken(): Promise<boolean> {
     console.log('DEBUG: refreshToken called')
     
-    const token = cookies.getAccessToken()
-    console.log('DEBUG: Token from cookies:', token ? 'exists' : 'missing')
+    // Получаем refresh token из cookies
+    const refreshToken = cookies.getRefreshToken()
+    console.log('DEBUG: Refresh token from cookies:', refreshToken ? 'exists' : 'missing')
     
-    const headers: Record<string, string> = {}
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+    if (!refreshToken) {
+      console.log('DEBUG: No refresh token found')
+      return false
     }
     
-    console.log('DEBUG: Headers for /users/me/:', headers)
-    
-    const response = await fetch(`${this.baseURL}/users/me/`, {
-      credentials: 'include',
-      headers,
-    })
-
-    console.log('DEBUG: /users/me/ response status:', response.status)
-
-    if (!response.ok) {
-      throw new Error('Не удалось обновить токен')
+    try {
+      // Отправляем запрос на обновление токена
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: 'include',
+      })
+      
+      console.log('DEBUG: /auth/refresh response status:', response.status)
+      
+      if (!response.ok) {
+        console.log('DEBUG: Failed to refresh token')
+        return false
+      }
+      
+      // Получаем новые токены
+      const tokenData: TokenResponse = await response.json()
+      
+      // Сохраняем новые токены в cookies
+      cookies.setAccessToken(tokenData.access_token)
+      cookies.setRefreshToken(tokenData.refresh_token)
+      
+      console.log('DEBUG: Token refreshed successfully')
+      return true
+    } catch (error) {
+      console.error('DEBUG: Error refreshing token:', error)
+      return false
     }
   }
 
@@ -156,11 +189,18 @@ class ApiClient {
     formData.append('username', login)
     formData.append('password', password)
 
-    return this.request<TokenResponse>('/auth/login', {
+    const response = await this.request<TokenResponse>('/auth/login', {
       method: 'POST',
       body: formData,
       headers: {}, // Не устанавливаем Content-Type для FormData
     })
+    
+    // Сохраняем refresh token в cookies
+    if (response.refresh_token) {
+      cookies.setRefreshToken(response.refresh_token)
+    }
+    
+    return response
   }
 
   async register(data: RegisterRequest): Promise<User> {
@@ -238,16 +278,15 @@ export interface NKOFilters {
   city?: string
   category?: string[]
   regex?: string
+  favorite?: boolean
 }
 
 // NKO API methods
 export async function fetchNKO(filters?: NKOFilters): Promise<NKOResponse[]> {
   const params = new URLSearchParams()
   
-  // Получаем токен из cookies или используем пустой
-  const token = typeof window !== 'undefined' && window.localStorage
-    ? localStorage.getItem('access_token')
-    : null
+  // Получаем токен из cookies (как в других частях приложения)
+  const token = cookies.getAccessToken()
   
   if (token) {
     params.append('jwt_token', token)
@@ -267,17 +306,22 @@ export async function fetchNKO(filters?: NKOFilters): Promise<NKOResponse[]> {
     params.append('regex', filters.regex)
   }
   
+  if (filters?.favorite !== undefined) {
+    params.append('favorite', filters.favorite.toString())
+    console.log('DEBUG: fetchNKO - Adding favorite filter:', filters.favorite)
+  }
+  
   const queryString = params.toString()
   const endpoint = `/nko${queryString ? `?${queryString}` : ''}`
+  
+  console.log('DEBUG: fetchNKO - Endpoint:', endpoint)
   
   return apiClient.get<NKOResponse[]>(endpoint)
 }
 
 export async function fetchNKOById(id: number): Promise<NKOResponse> {
   // Добавляем JWT токен как в других функциях
-  const token = typeof window !== 'undefined' && window.localStorage
-    ? localStorage.getItem('access_token')
-    : null
+  const token = cookies.getAccessToken()
   
   const params = new URLSearchParams()
   if (token) {
@@ -295,10 +339,8 @@ export async function fetchNKOById(id: number): Promise<NKOResponse> {
 }
 
 export async function fetchCities(): Promise<CityResponse[]> {
-  // Получаем токен из cookies или используем пустой
-  const token = typeof window !== 'undefined' && window.localStorage
-    ? localStorage.getItem('access_token')
-    : null
+  // Получаем токен из cookies
+  const token = cookies.getAccessToken()
   
   const params = new URLSearchParams()
   if (token) {
@@ -334,6 +376,8 @@ export interface EventResponse {
 }
 
 export interface EventFilters {
+  city?: string
+  favorite?: boolean
   nko_id?: number[]
   category?: string[]
   regex?: string
@@ -345,15 +389,22 @@ export interface EventFilters {
 export async function fetchEvents(filters?: EventFilters): Promise<EventResponse[]> {
   const params = new URLSearchParams()
   
-  // Получаем токен из cookies или используем пустой
-  const token = typeof window !== 'undefined' && window.localStorage
-    ? localStorage.getItem('access_token')
-    : null
+  // Получаем токен из cookies
+  const token = cookies.getAccessToken()
   
   if (token) {
     params.append('jwt_token', token)
   } else {
     params.append('jwt_token', '') // Пустой токен для неавторизованных пользователей
+  }
+  
+  if (filters?.city) {
+    params.append('city', filters.city)
+  }
+  
+  if (filters?.favorite !== undefined) {
+    params.append('favorite', filters.favorite.toString())
+    console.log('DEBUG: fetchEvents - Adding favorite filter:', filters.favorite)
   }
   
   if (filters?.nko_id && filters.nko_id.length > 0) {
@@ -379,14 +430,14 @@ export async function fetchEvents(filters?: EventFilters): Promise<EventResponse
   const queryString = params.toString()
   const endpoint = `/event${queryString ? `?${queryString}` : ''}`
   
+  console.log('DEBUG: fetchEvents - Endpoint:', endpoint)
+  
   return apiClient.get<EventResponse[]>(endpoint)
 }
 
 export async function fetchEventById(id: number): Promise<EventResponse> {
   // Добавляем JWT токен как в других функциях
-  const token = typeof window !== 'undefined' && window.localStorage
-    ? localStorage.getItem('access_token')
-    : null
+  const token = cookies.getAccessToken()
   
   const params = new URLSearchParams()
   if (token) {
@@ -401,4 +452,60 @@ export async function fetchEventById(id: number): Promise<EventResponse> {
   console.log('DEBUG: fetchEventById - ID:', id, 'Endpoint:', endpoint)
   
   return apiClient.get<EventResponse>(endpoint)
+}
+
+// Favorites API functions
+export async function addNKOToFavorites(nkoId: number): Promise<{ message: string }> {
+  console.log('DEBUG: addNKOToFavorites - NKO ID:', nkoId)
+  const endpoint = `/nko/${nkoId}/favorite`
+  return apiClient.post<{ message: string }>(endpoint, {})
+}
+
+export async function removeNKOFromFavorites(nkoId: number): Promise<{ message: string }> {
+  console.log('DEBUG: removeNKOFromFavorites - NKO ID:', nkoId)
+  const endpoint = `/nko/${nkoId}/favorite`
+  return apiClient.delete<{ message: string }>(endpoint)
+}
+
+export async function checkIfNKOIsFavorite(nkoId: number): Promise<boolean> {
+  console.log('DEBUG: checkIfNKOIsFavorite - NKO ID:', nkoId)
+  try {
+    // Получаем избранные НКО пользователя и проверяем наличие текущей
+    const favorites = await fetchNKO({ favorite: true })
+    const isFavorite = favorites.some(nko => nko.id === nkoId)
+    console.log('DEBUG: checkIfNKOIsFavorite - result:', isFavorite)
+    return isFavorite
+  } catch (error) {
+    console.log('DEBUG: checkIfNKOIsFavorite - error:', error)
+    // Если ошибка (например, пользователь не авторизован), считаем что не в избранном
+    return false
+  }
+}
+
+// Event favorites API functions
+export async function addEventToFavorites(eventId: number): Promise<{ message: string }> {
+  console.log('DEBUG: addEventToFavorites - Event ID:', eventId)
+  const endpoint = `/event/${eventId}/favorite`
+  return apiClient.post<{ message: string }>(endpoint, {})
+}
+
+export async function removeEventFromFavorites(eventId: number): Promise<{ message: string }> {
+  console.log('DEBUG: removeEventFromFavorites - Event ID:', eventId)
+  const endpoint = `/event/${eventId}/favorite`
+  return apiClient.delete<{ message: string }>(endpoint)
+}
+
+export async function checkIfEventIsFavorite(eventId: number): Promise<boolean> {
+  console.log('DEBUG: checkIfEventIsFavorite - Event ID:', eventId)
+  try {
+    // Получаем избранные события пользователя и проверяем наличие текущего
+    const favorites = await fetchEvents({ favorite: true })
+    const isFavorite = favorites.some(event => event.id === eventId)
+    console.log('DEBUG: checkIfEventIsFavorite - result:', isFavorite)
+    return isFavorite
+  } catch (error) {
+    console.log('DEBUG: checkIfEventIsFavorite - error:', error)
+    // Если ошибка (например, пользователь не авторизован), считаем что не в избранном
+    return false
+  }
 }

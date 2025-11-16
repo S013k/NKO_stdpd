@@ -4,10 +4,10 @@ import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { MapPin, Phone, Mail, Globe, Users, Calendar, ArrowLeft, Heart, Share2, Star, Clock, Building } from 'lucide-react'
+import { MapPin, Phone, Mail, Globe, Users, Calendar, ArrowLeft, Heart, Share2, Star, Clock, Building, X } from 'lucide-react'
 import { S3Image } from '@/components/S3Image'
 import Link from 'next/link'
-import { fetchEventById, EventResponse } from '@/lib/api'
+import { fetchEventById, EventResponse, addEventToFavorites, removeEventFromFavorites, checkIfEventIsFavorite } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -23,6 +23,7 @@ export default function EventDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false)
   
   console.log('EventDetailPage - id:', id)
   
@@ -42,6 +43,13 @@ export default function EventDetailPage() {
         const eventData = await fetchEventById(eventId)
         console.log('EventDetailPage - fetched Event:', eventData)
         setEvent(eventData)
+        
+        // Проверяем статус избранного после загрузки события
+        if (user) {
+          console.log('EventDetailPage - checking favorite status for user:', user.id)
+          const favoriteStatus = await checkIfEventIsFavorite(eventId)
+          setIsFavorite(favoriteStatus)
+        }
       } catch (err) {
         console.error('Error fetching Event:', err)
         setError('Не удалось загрузить данные события')
@@ -53,7 +61,25 @@ export default function EventDetailPage() {
     if (id) {
       loadEvent()
     }
-  }, [id])
+  }, [id, user])
+
+  // Отдельный useEffect для проверки статуса избранного при изменении пользователя
+  useEffect(() => {
+    if (event && user) {
+      console.log('EventDetailPage - user changed, checking favorite status')
+      checkIfEventIsFavorite(event.id)
+        .then(favoriteStatus => {
+          setIsFavorite(favoriteStatus)
+        })
+        .catch(err => {
+          console.error('Error checking favorite status:', err)
+          setIsFavorite(false)
+        })
+    } else if (!user) {
+      // Сбрасываем состояние если пользователь вышел
+      setIsFavorite(false)
+    }
+  }, [user, event])
 
   // Format date and time
   const formatDateTime = (dateString?: string) => {
@@ -213,19 +239,43 @@ export default function EventDetailPage() {
                   size="lg"
                   variant="outline"
                   className="border-white text-white bg-transparent hover:bg-white hover:text-[var(--color-primary)]"
-                  onClick={() => {
-                    console.log('Button clicked - user:', user)
+                  onClick={async () => {
+                    console.log('DEBUG: Favorites button clicked - user:', user)
+                    console.log('DEBUG: Current Event ID:', event?.id)
+                    console.log('DEBUG: Current favorite state:', isFavorite)
+                   
                     if (!user) {
-                      console.log('Showing auth modal')
+                      console.log('DEBUG: User not authenticated, showing auth modal')
                       setShowAuthModal(true)
                     } else {
-                      console.log('Toggling favorite:', !isFavorite)
-                      setIsFavorite(!isFavorite)
+                      console.log('DEBUG: User authenticated, attempting to toggle favorite')
+                      setIsLoadingFavorite(true)
+                      
+                      try {
+                        if (isFavorite) {
+                          console.log('DEBUG: Removing from favorites')
+                          await removeEventFromFavorites(event.id)
+                          setIsFavorite(false)
+                          console.log('DEBUG: Successfully removed from favorites')
+                        } else {
+                          console.log('DEBUG: Adding to favorites')
+                          await addEventToFavorites(event.id)
+                          setIsFavorite(true)
+                          console.log('DEBUG: Successfully added to favorites')
+                        }
+                      } catch (error) {
+                        console.error('DEBUG: Error toggling favorite:', error)
+                        // Возвращаем предыдущее состояние при ошибке
+                        // setIsFavorite(isFavorite) // уже установлено правильно
+                      } finally {
+                        setIsLoadingFavorite(false)
+                      }
                     }
                   }}
+                  disabled={isLoadingFavorite}
                 >
                   <Star className={`h-4 w-4 mr-2 ${isFavorite ? 'fill-current' : ''}`} />
-                  {isFavorite ? 'В избранном' : 'В избранное'}
+                  {isLoadingFavorite ? 'Загрузка...' : (isFavorite ? 'В избранном' : 'В избранное')}
                 </Button>
                 <Button size="lg" variant="outline" className="border-white text-white bg-transparent hover:bg-white hover:text-[var(--color-primary)]">
                   <Share2 className="h-4 w-4 mr-2" />
@@ -236,29 +286,30 @@ export default function EventDetailPage() {
               {/* Модальное окно авторизации */}
               {showAuthModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-                      Требуется авторизация
-                    </h3>
-                    <p className="text-[var(--color-text-secondary)] mb-4">
+                  <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex-1"></div>
+                      <h3 className="text-lg font-semibold text-gray-900 text-center">Требуется авторизация</h3>
+                      <div className="flex-1 flex justify-end">
+                        <button
+                          onClick={() => setShowAuthModal(false)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <X className="h-6 w-6" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center text-gray-600 mb-4">
                       Чтобы добавлять события в избранное, пожалуйста, войдите в свой аккаунт.
-                    </p>
-                    <div className="flex gap-3">
+                    </div>
+                    
+                    <div className="flex justify-center">
                       <Button
                         onClick={() => setShowAuthModal(false)}
-                        variant="outline"
-                        className="flex-1"
+                        className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                       >
-                        Отмена
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setShowAuthModal(false)
-                          // Здесь можно добавить логику перехода на страницу входа
-                        }}
-                        className="flex-1 btn-primary"
-                      >
-                        Войти
+                        Закрыть
                       </Button>
                     </div>
                   </div>

@@ -3,36 +3,74 @@
 import { Header } from '@/components/Header'
 import { NKOCard } from '@/components/NKOCard'
 import { Footer } from '@/components/Footer'
+import { PageHeader } from '@/components/PageHeader'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, Heart, X } from 'lucide-react'
 import { fetchNKO, fetchCities, NKOResponse, CityResponse, NKOFilters } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 import { useState, useMemo, useEffect } from 'react'
 
 export default function NKOPage() {
+  const { user, isLoading: authLoading } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedCity, setSelectedCity] = useState<string>('all')
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [nkoData, setNKOData] = useState<NKOResponse[]>([])
   const [cities, setCities] = useState<CityResponse[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Загрузка данных при монтировании компонента
+  // DEBUG: Log authentication state
+  console.log('DEBUG: NKO Page - User auth state:', {
+    user: user ? { id: user.id, login: user.login, role: user.role } : null,
+    authLoading
+  })
+  console.log('DEBUG: NKO Page - Show favorites only:', showFavoritesOnly)
+
+  // Загрузка данных при монтировании компонента и изменении фильтров
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
         setError(null)
         
+        // DEBUG: Log filter parameters
+        const filters: NKOFilters = {}
+        if (selectedCity !== 'all') {
+          filters.city = selectedCity
+        }
+        if (selectedCategory !== 'all') {
+          filters.category = [selectedCategory]
+        }
+        if (searchTerm) {
+          filters.regex = searchTerm
+        }
+        
+        // Добавляем фильтр по избранным только для авторизованных пользователей
+        if (showFavoritesOnly && user) {
+          filters.favorite = true
+          console.log('DEBUG: NKO Page - Applying favorites filter for user:', user.id)
+        } else if (showFavoritesOnly && !user) {
+          console.warn('DEBUG: NKO Page - Cannot apply favorites filter - user not authenticated')
+          // Не применяем фильтр если пользователь не авторизован
+        }
+        
+        console.log('DEBUG: NKO Page - Loading data with filters:', filters)
+        console.log('DEBUG: NKO Page - Show favorites only:', showFavoritesOnly)
+        console.log('DEBUG: NKO Page - User authenticated:', !!user)
+        
         // Параллельно загружаем НКО и города
         const [nkoResponse, citiesResponse] = await Promise.all([
-          fetchNKO(),
+          fetchNKO(filters),
           fetchCities()
         ])
         
+        console.log('DEBUG: NKO Page - Loaded NKO count:', nkoResponse.length)
         setNKOData(nkoResponse)
         setCities(citiesResponse)
         
@@ -50,8 +88,11 @@ export default function NKOPage() {
       }
     }
 
-    loadData()
-  }, [])
+    // Ждем окончания загрузки авторизации перед загрузкой данных
+    if (!authLoading) {
+      loadData()
+    }
+  }, [authLoading, selectedCity, selectedCategory, searchTerm, showFavoritesOnly, user])
 
   const filteredNKO = useMemo(() => {
     return nkoData.filter(nko => {
@@ -64,34 +105,65 @@ export default function NKOPage() {
     })
   }, [nkoData, searchTerm, selectedCategory, selectedCity])
 
+  // Модальное окно авторизации
+  const AuthModal = () => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center min-h-screen z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex-1"></div>
+            <h3 className="text-lg font-semibold text-gray-900 text-center">Требуется авторизация</h3>
+            <div className="flex-1 flex justify-end">
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="text-center text-gray-600 mb-4">
+            Чтобы добавлять организации в избранное, пожалуйста, войдите в систему
+          </div>
+          
+          <div className="flex justify-center">
+            <Button
+              onClick={() => setShowAuthModal(false)}
+              className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+            >
+              Закрыть
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
       
       {/* Заголовок страницы */}
-      <section className="bg-[var(--color-bg-secondary)] py-12">
+      <PageHeader
+        title="Некоммерческие организации"
+        description="Найдите организации, которые занимаются благотворительностью, экологией, образованием и другими важными инициативами в вашем городе"
+      />
+      
+      {/* Фильтры */}
+      <section className="bg-white py-6 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-4">
-              Некоммерческие организации
-            </h1>
-            <p className="text-xl text-[var(--color-text-secondary)] max-w-3xl mx-auto">
-              Найдите организации, которые занимаются благотворительностью, экологией, образованием и другими важными инициативами в вашем городе
-            </p>
-          </div>
-          
-          {/* Фильтры */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-[var(--color-border)]">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Поиск */}
               <div className="md:col-span-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--color-text-secondary)]" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Поиск организаций..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-[var(--color-border)] focus:ring-[var(--color-primary)]"
+                    className="pl-10 border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -99,7 +171,7 @@ export default function NKOPage() {
               {/* Фильтр по категории */}
               <div>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="border-[var(--color-border)] focus:ring-[var(--color-primary)]">
+                  <SelectTrigger className="border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 bg-white">
                     <SelectValue placeholder="Все категории" />
                   </SelectTrigger>
                   <SelectContent>
@@ -116,7 +188,7 @@ export default function NKOPage() {
               {/* Фильтр по городу */}
               <div>
                 <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger className="border-[var(--color-border)] focus:ring-[var(--color-primary)]">
+                  <SelectTrigger className="border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 bg-white">
                     <SelectValue placeholder="Все города" />
                   </SelectTrigger>
                   <SelectContent>
@@ -130,6 +202,24 @@ export default function NKOPage() {
                 </Select>
               </div>
               
+              {/* Фильтр по избранным (для всех пользователей) */}
+              <div>
+                <Button
+                  variant={showFavoritesOnly ? "default" : "outline"}
+                  onClick={() => {
+                    if (!user) {
+                      setShowAuthModal(true)
+                    } else {
+                      setShowFavoritesOnly(!showFavoritesOnly)
+                    }
+                  }}
+                  className={`w-full ${showFavoritesOnly ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'}`}
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                  Избранные
+                </Button>
+              </div>
+              
               {/* Сброс фильтров */}
               <div>
                 <Button
@@ -138,8 +228,10 @@ export default function NKOPage() {
                     setSearchTerm('')
                     setSelectedCategory('all')
                     setSelectedCity('all')
+                    setShowFavoritesOnly(false)
+                    setShowAuthModal(false)
                   }}
-                  className="w-full btn-secondary"
+                  className="w-full bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Сбросить
@@ -219,6 +311,7 @@ export default function NKOPage() {
                       setSearchTerm('')
                       setSelectedCategory('all')
                       setSelectedCity('all')
+                      setShowFavoritesOnly(false)
                     }}
                     className="btn-primary"
                   >
@@ -230,6 +323,9 @@ export default function NKOPage() {
           )}
         </div>
       </section>
+
+      {/* Модальное окно авторизации */}
+      {showAuthModal && <AuthModal />}
 
       <Footer />
     </div>
