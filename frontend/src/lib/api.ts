@@ -336,6 +336,8 @@ export interface EventResponse {
 }
 
 export interface EventFilters {
+  city?: string
+  favorite?: boolean
   nko_id?: number[]
   category?: string[]
   regex?: string
@@ -354,6 +356,15 @@ export async function fetchEvents(filters?: EventFilters): Promise<EventResponse
     params.append('jwt_token', token)
   } else {
     params.append('jwt_token', '') // Пустой токен для неавторизованных пользователей
+  }
+  
+  if (filters?.city) {
+    params.append('city', filters.city)
+  }
+  
+  if (filters?.favorite !== undefined) {
+    params.append('favorite', filters.favorite.toString())
+    console.log('DEBUG: fetchEvents - Adding favorite filter:', filters.favorite)
   }
   
   if (filters?.nko_id && filters.nko_id.length > 0) {
@@ -378,6 +389,8 @@ export async function fetchEvents(filters?: EventFilters): Promise<EventResponse
   
   const queryString = params.toString()
   const endpoint = `/event${queryString ? `?${queryString}` : ''}`
+  
+  console.log('DEBUG: fetchEvents - Endpoint:', endpoint)
   
   return apiClient.get<EventResponse[]>(endpoint)
 }
@@ -424,6 +437,34 @@ export async function checkIfNKOIsFavorite(nkoId: number): Promise<boolean> {
     return isFavorite
   } catch (error) {
     console.log('DEBUG: checkIfNKOIsFavorite - error:', error)
+    // Если ошибка (например, пользователь не авторизован), считаем что не в избранном
+    return false
+  }
+}
+
+// Event favorites API functions
+export async function addEventToFavorites(eventId: number): Promise<{ message: string }> {
+  console.log('DEBUG: addEventToFavorites - Event ID:', eventId)
+  const endpoint = `/event/${eventId}/favorite`
+  return apiClient.post<{ message: string }>(endpoint, {})
+}
+
+export async function removeEventFromFavorites(eventId: number): Promise<{ message: string }> {
+  console.log('DEBUG: removeEventFromFavorites - Event ID:', eventId)
+  const endpoint = `/event/${eventId}/favorite`
+  return apiClient.delete<{ message: string }>(endpoint)
+}
+
+export async function checkIfEventIsFavorite(eventId: number): Promise<boolean> {
+  console.log('DEBUG: checkIfEventIsFavorite - Event ID:', eventId)
+  try {
+    // Получаем избранные события пользователя и проверяем наличие текущего
+    const favorites = await fetchEvents({ favorite: true })
+    const isFavorite = favorites.some(event => event.id === eventId)
+    console.log('DEBUG: checkIfEventIsFavorite - result:', isFavorite)
+    return isFavorite
+  } catch (error) {
+    console.log('DEBUG: checkIfEventIsFavorite - error:', error)
     // Если ошибка (например, пользователь не авторизован), считаем что не в избранном
     return false
   }
