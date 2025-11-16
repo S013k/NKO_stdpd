@@ -3,6 +3,7 @@
 import { Header } from '@/components/Header'
 import { NKOCard } from '@/components/NKOCard'
 import { Footer } from '@/components/Footer'
+import { PageHeader } from '@/components/PageHeader'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
@@ -144,29 +145,25 @@ export default function NKOPage() {
       <Header />
       
       {/* Заголовок страницы */}
-      <section className="bg-[var(--color-bg-secondary)] py-12">
+      <PageHeader
+        title="Некоммерческие организации"
+        description="Найдите организации, которые занимаются благотворительностью, экологией, образованием и другими важными инициативами в вашем городе"
+      />
+      
+      {/* Фильтры */}
+      <section className="bg-white py-6 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-4">
-              Некоммерческие организации
-            </h1>
-            <p className="text-xl text-[var(--color-text-secondary)] max-w-3xl mx-auto">
-              Найдите организации, которые занимаются благотворительностью, экологией, образованием и другими важными инициативами в вашем городе
-            </p>
-          </div>
-          
-          {/* Фильтры */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-[var(--color-border)]">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Поиск */}
               <div className="md:col-span-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--color-text-secondary)]" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Поиск организаций..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-[var(--color-border)] focus:ring-[var(--color-primary)]"
+                    className="pl-10 border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -174,7 +171,7 @@ export default function NKOPage() {
               {/* Фильтр по категории */}
               <div>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="border-[var(--color-border)] focus:ring-[var(--color-primary)]">
+                  <SelectTrigger className="border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 bg-white">
                     <SelectValue placeholder="Все категории" />
                   </SelectTrigger>
                   <SelectContent>
@@ -191,7 +188,7 @@ export default function NKOPage() {
               {/* Фильтр по городу */}
               <div>
                 <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger className="border-[var(--color-border)] focus:ring-[var(--color-primary)]">
+                  <SelectTrigger className="border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 bg-white">
                     <SelectValue placeholder="Все города" />
                   </SelectTrigger>
                   <SelectContent>
@@ -216,7 +213,7 @@ export default function NKOPage() {
                       setShowFavoritesOnly(!showFavoritesOnly)
                     }
                   }}
-                  className={`w-full ${showFavoritesOnly ? 'btn-primary' : 'btn-secondary'}`}
+                  className={`w-full ${showFavoritesOnly ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'}`}
                 >
                   <Heart className={`h-4 w-4 mr-2 ${showFavoritesOnly ? 'fill-current' : ''}`} />
                   Избранные
@@ -234,7 +231,7 @@ export default function NKOPage() {
                     setShowFavoritesOnly(false)
                     setShowAuthModal(false)
                   }}
-                  className="w-full btn-secondary"
+                  className="w-full bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Сбросить
