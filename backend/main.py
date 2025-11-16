@@ -238,6 +238,7 @@ def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
 def get_events(
     jwt_token: str = "",
     nko_id: Optional[List[int]] = Query(None),
+    city: Optional[str] = None,
     favorite: Optional[bool] = None,
     category: Optional[List[str]] = Query(None),
     regex: Optional[str] = None,
@@ -251,6 +252,7 @@ def get_events(
     Args:
         jwt_token: JWT токен пользователя (может быть пустой строкой, обязателен только для favorite)
         nko_id: Фильтр по НКО (опционально, можно передать несколько раз)
+        city: Фильтр по городу (опционально)
         favorite: Фильтр по избранным (опционально, требует jwt_token)
         category: Фильтр по категориям (опционально, можно передать несколько раз)
         regex: Регулярное выражение для поиска (опционально)
@@ -262,12 +264,13 @@ def get_events(
         Список событий с их категориями
     
     Example:
-        GET /event?jwt_token=&nko_id=1&nko_id=2&category=Спорт&time_from=2024-01-01T00:00:00
+        GET /event?jwt_token=&nko_id=1&nko_id=2&city=Москва&category=Спорт&time_from=2024-01-01T00:00:00
         GET /event?jwt_token=TOKEN&favorite=true
     """
     filters = EventFilterRequest(
         jwt_token=jwt_token,
         nko_id=nko_id,
+        city=city,
         favorite=favorite,
         category=category,
         regex=regex,
