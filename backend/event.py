@@ -83,12 +83,22 @@ def fetch_events(filters: EventFilterRequest, db: Session) -> List[EventResponse
     """
     
     try:
+        print(f"DEBUG: fetch_events called with filters: {filters}")
+        print(f"DEBUG: filters.city = {filters.city}")
+        
         # Базовый запрос с JOIN к НКО и городам
         query = (
             db.query(EventInDB, NKOInDB.name.label("nko_name"), CityInDB.name.label("city_name"))
             .join(NKOInDB, EventInDB.nko_id == NKOInDB.id)
             .join(CityInDB, EventInDB.city_id == CityInDB.id)
         )
+        
+        # Фильтр по городу - ЭТОТ КОД ОТСУТСТВУЕТ!
+        if filters.city:
+            print(f"DEBUG: Applying city filter: {filters.city}")
+            query = query.filter(CityInDB.name == filters.city)
+        else:
+            print("DEBUG: No city filter applied")
         
         # Фильтр по НКО (можно несколько)
         if filters.nko_id and len(filters.nko_id) > 0:
