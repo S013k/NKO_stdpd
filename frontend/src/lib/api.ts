@@ -362,6 +362,7 @@ export interface EventResponse {
   name: string
   description?: string
   address?: string
+  city?: string
   picture?: string
   latitude?: number
   longitude?: number

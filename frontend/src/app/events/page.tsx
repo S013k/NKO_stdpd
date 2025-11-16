@@ -86,8 +86,10 @@ export default function EventsPage() {
         
         // DEBUG: Log event data structure
         console.log('DEBUG: Events - Sample event data:', eventsResponse[0])
-        console.log('DEBUG: Events - All event cities:', eventsResponse.map(e => ({ id: e.id, name: e.name, nko_name: e.nko_name })))
+        console.log('DEBUG: Events - All event cities:', eventsResponse.map(e => ({ id: e.id, name: e.name, city: e.city, nko_name: e.nko_name })))
         console.log('DEBUG: Events - Loaded events count:', eventsResponse.length)
+        console.log('DEBUG: Events - Available cities for filter:', citiesResponse.map(c => ({ id: c.id, name: c.name })))
+        console.log('DEBUG: Events - Selected city filter:', selectedCity)
         
         // Сортируем события по дате (ближайшие первые)
         const sortedEvents = eventsResponse.sort((a, b) => {
