@@ -68,13 +68,13 @@ export function getNKOLogoUrlFromData(logoData: string): string {
     return logoData
   }
   
-  // Для локальных файлов в папке public/images
+  // Для локальных файлов в папке nko-logo, используем S3 API
   if (logoData.startsWith('nko-logo/')) {
-    // Используем статическое изображение вместо S3
+    // Используем S3 API endpoint: /api/s3/{bucket}/{filename}
     const logoFileName = logoData.replace('nko-logo/', '');
-    const staticUrl = `/images/${logoFileName}`;
-    console.log('DEBUG: Using static URL:', staticUrl);
-    return staticUrl;
+    const s3ApiUrl = `/api/s3/nko-logo/${logoFileName}`;
+    console.log('DEBUG: Using S3 API URL:', s3ApiUrl);
+    return s3ApiUrl;
   }
   
   // Иначе используем S3 путь (для обратной совместимости)
@@ -105,10 +105,10 @@ export function getNKOLogoUrlWithFallback(logoData: string, fallbackLogo?: strin
  * Получить URL логотипа НКО (для обратной совместимости)
  */
 export function getNKOLogoUrl(logoId: string): string {
-  // Используем статическое изображение вместо S3
-  const staticUrl = `/images/nko-logo-${logoId}.png`
-  console.log('DEBUG: getNKOLogoUrl - logoId:', logoId, 'generated static URL:', staticUrl)
-  return staticUrl
+  // Используем S3 API для обратной совместимости
+  const s3ApiUrl = `/api/s3/nko-logo/nko-logo-${logoId}.png`
+  console.log('DEBUG: getNKOLogoUrl - logoId:', logoId, 'generated S3 API URL:', s3ApiUrl)
+  return s3ApiUrl
 }
 
 /**
