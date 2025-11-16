@@ -1,24 +1,29 @@
 #!/bin/bash
 
-# Получение списка НКО с фильтром по городу (БЕЗ токена)
+# Получение списка НКО с фильтром по городу (с пустым токеном)
 curl -G "http://localhost/api/nko" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "city=Москва"
 
-# Получение списка НКО с фильтром по категории (БЕЗ токена)
+# Получение списка НКО с фильтром по категории (с пустым токеном)
 curl -G "http://localhost/api/nko" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "category=Экологические инициативы"
 
-# Получение списка НКО с фильтром по нескольким категориям (БЕЗ токена)
+# Получение списка НКО с фильтром по нескольким категориям (с пустым токеном)
 curl -G "http://localhost/api/nko" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "category=Помощь детям" \
   --data-urlencode "category=Образование"
 
-# Получение списка НКО с фильтром по regex (БЕЗ токена)
+# Получение списка НКО с фильтром по regex (с пустым токеном)
 curl -G "http://localhost/api/nko" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "regex=инициативы"
 
-# Получение всех НКО без фильтров (БЕЗ токена)
-curl -G "http://localhost/api/nko"
+# Получение всех НКО без фильтров (с пустым токеном)
+curl -G "http://localhost/api/nko" \
+  --data-urlencode "jwt_token="
 
 # Получение конкретного НКО по ID
 curl -X GET http://localhost/api/nko/1

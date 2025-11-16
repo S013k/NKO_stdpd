@@ -17,7 +17,7 @@ from models import (
 class EventFilterRequest(BaseModel):
     """Модель запроса для фильтрации событий"""
 
-    jwt_token: Optional[str] = None  # Опциональный токен, обязателен только для favorite
+    jwt_token: str = ""  # Может быть пустой строкой, обязателен только для favorite
     nko_id: Optional[List[int]] = None  # Фильтр по НКО (можно несколько)
     favorite: Optional[bool] = None  # Фильтр по избранным
     category: Optional[List[str]] = None

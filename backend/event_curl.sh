@@ -1,37 +1,45 @@
 #!/bin/bash
 
-# Получение всех событий (БЕЗ токена)
-curl -G "http://localhost/api/event"
-
-# Получение событий с фильтром по одному НКО (БЕЗ токена)
+# Получение всех событий (с пустым токеном)
 curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token="
+
+# Получение событий с фильтром по одному НКО (с пустым токеном)
+curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "nko_id=1"
 
-# Получение событий с фильтром по нескольким НКО (БЕЗ токена)
+# Получение событий с фильтром по нескольким НКО (с пустым токеном)
 curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "nko_id=1" \
   --data-urlencode "nko_id=2"
 
-# Получение событий с фильтром по категории (БЕЗ токена)
+# Получение событий с фильтром по категории (с пустым токеном)
 curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "category=Спорт"
 
-# Получение событий с фильтром по нескольким категориям (БЕЗ токена)
+# Получение событий с фильтром по нескольким категориям (с пустым токеном)
 curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "category=Спорт" \
   --data-urlencode "category=Культура"
 
-# Получение событий с фильтром по временному диапазону (БЕЗ токена)
+# Получение событий с фильтром по временному диапазону (с пустым токеном)
 curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "time_from=2024-01-01T00:00:00" \
   --data-urlencode "time_to=2024-12-31T23:59:59"
 
-# Получение событий с regex поиском (БЕЗ токена)
+# Получение событий с regex поиском (с пустым токеном)
 curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "regex=концерт"
 
-# Комбинированный фильтр: НКО + категория + время (БЕЗ токена)
+# Комбинированный фильтр: НКО + категория + время (с пустым токеном)
 curl -G "http://localhost/api/event" \
+  --data-urlencode "jwt_token=" \
   --data-urlencode "nko_id=1" \
   --data-urlencode "category=Спорт" \
   --data-urlencode "time_from=2024-06-01T00:00:00"
