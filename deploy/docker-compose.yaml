@@ -127,6 +127,26 @@ services:
     networks:
       - cora-network
 
+  mcp:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mcp
+    environment:
+      - BACKEND_URL=http://cora:8000
+      - NODE_ENV=production
+    depends_on:
+      cora:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cora-network
+
   nginx:
     image: nginx:latest
     ports:
@@ -136,6 +156,7 @@ services:
     depends_on:
       - quokka
       - cora
+      - mcp
     networks:
       - cora-network
 
